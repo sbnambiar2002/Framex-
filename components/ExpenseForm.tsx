@@ -48,7 +48,8 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, upda
     } else {
        setFormData(getInitialFormData());
     }
-  }, [editingExpense, currentUser, usersMap]);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [editingExpense, currentUser]);
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     const { name, value } = e.target;
@@ -86,7 +87,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, upda
     };
 
     if (editingExpense) {
-      updateExpense({ ...expenseData, id: editingExpense.id, timestamp: editingExpense.timestamp });
+      updateExpense({ ...expenseData, id: editingExpense.id, timestamp: editingExpense.timestamp, createdBy: editingExpense.createdBy });
     } else {
       addExpense(expenseData);
     }
@@ -94,7 +95,7 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, upda
   };
 
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg">
+    <div className="p-6 sm:p-8">
       <h3 className="text-xl font-bold text-gray-800 mb-6">{editingExpense ? 'Edit Entry' : 'Add New Entry'}</h3>
       <form onSubmit={handleSubmit} className="grid grid-cols-1 md:grid-cols-6 gap-6">
         

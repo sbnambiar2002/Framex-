@@ -34,8 +34,12 @@ const MasterDataSection: React.FC<MasterDataSectionProps> = ({ title, data, onAd
   };
 
   const handleDelete = (id: string) => {
-    onDelete(id);
+    if (window.confirm('Are you sure you want to delete this item?')) {
+        onDelete(id);
+    }
   };
+
+  const singularTitle = title.endsWith('s') ? title.slice(0, -1) : title;
 
   return (
     <div className="bg-white p-6 rounded-xl shadow-lg h-full flex flex-col">
@@ -45,19 +49,19 @@ const MasterDataSection: React.FC<MasterDataSectionProps> = ({ title, data, onAd
           type="text"
           value={newItemName}
           onChange={(e) => setNewItemName(e.target.value)}
-          placeholder={`New ${title.split(' ')[0].toLowerCase()} name`}
+          placeholder={`New ${singularTitle.toLowerCase()} name`}
           className="flex-grow block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
-          aria-label={`New ${title} name`}
+          aria-label={`New ${singularTitle} name`}
         />
         <button
           type="submit"
           className="inline-flex items-center justify-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-          aria-label={`Add new ${title.slice(0,-1)}`}
+          aria-label={`Add new ${singularTitle}`}
         >
           <PlusIcon className="w-5 h-5" />
         </button>
       </form>
-      <div className="flex-grow overflow-y-auto">
+      <div className="flex-grow overflow-y-auto pr-2 -mr-2">
         <ul className="divide-y divide-gray-200">
           {data.map(item => (
             <li key={item.id} className="py-3 flex items-center justify-between">

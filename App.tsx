@@ -19,22 +19,8 @@ const isLocalStorageAvailable = () => {
   }
 };
 
-const App: React.FC = () => {
-  const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
-  const [users, setUsers] = useState<User[]>([]);
-  const [expenses, setExpenses] = useState<Expense[]>([]);
-  const [logo, setLogo] = useState<string | null>(null);
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
-  const [isAppReady, setIsAppReady] = useState(false); // New state to control when the app is ready to render
-
-  // New state for master data
-  const [costCenters, setCostCenters] = useState<MasterData[]>([]);
-  const [projectCodes, setProjectCodes] = useState<MasterData[]>([]);
-  const [expensesCategories, setExpensesCategories] = useState<MasterData[]>([]);
-  const [parties, setParties] = useState<MasterData[]>([]);
-
-  // Generic function to load from localStorage. It no longer needs to call setters directly.
-  const loadFromLocalStorage = useCallback(<T,>(key: string, defaultValue: T): T => {
+// Generic function to load from localStorage.
+const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
     if (!isLocalStorageAvailable()) {
       return defaultValue;
     }
@@ -46,10 +32,10 @@ const App: React.FC = () => {
       localStorage.removeItem(key); // Clean up corrupted data
       return defaultValue;
     }
-  }, []);
+};
 
-  // Generic function to save to localStorage with enhanced error handling
-  const saveToLocalStorage = useCallback(<T,>(key:string, data: T) => {
+// Generic function to save to localStorage with enhanced error handling
+const saveToLocalStorage = <T,>(key:string, data: T) => {
     if (!isLocalStorageAvailable()) return;
     try {
       localStorage.setItem(key, JSON.stringify(data));
@@ -61,37 +47,42 @@ const App: React.FC = () => {
         alert(`An unexpected error occurred while trying to save your data for "${key}".`);
       }
     }
-  }, []);
-
-  // Definitive startup effect: Load ALL data first, then update state and allow rendering.
-  useEffect(() => {
-    const initialUsers = loadFromLocalStorage('users', []);
-    setUsers(initialUsers);
-    
-    setExpenses(loadFromLocalStorage('expenses', []));
-    setCostCenters(loadFromLocalStorage('costCenters', [{id: 'cc-1', name: 'Internal Project'}, {id: 'cc-2', name: 'Client Project A'}]));
-    setProjectCodes(loadFromLocalStorage('projectCodes', [{id: 'pc-1', name: 'PROJ-001'}, {id: 'pc-2', name: 'PROJ-002'}]));
-    setExpensesCategories(loadFromLocalStorage('expensesCategories', [{id: 'ec-1', name: 'Office Supplies'}, {id: 'ec-2', name: 'Travel'}]));
-    setParties(loadFromLocalStorage('parties', [{id: 'p-1', name: 'Amazon'}, {id: 'p-2', name: 'Client X'}]));
-    setCompanyInfo(loadFromLocalStorage('companyInfo', null));
-    setLogo(loadFromLocalStorage('logo', null));
-    
-    setIsAppReady(true); // Signal that the app is ready to render its state.
-  }, [loadFromLocalStorage]);
+};
 
 
-  // Save ALL data to localStorage whenever it changes, but only after initial load.
-  useEffect(() => { if (isAppReady) saveToLocalStorage('users', users) }, [users, isAppReady, saveToLocalStorage]);
-  useEffect(() => { if (isAppReady) saveToLocalStorage('expenses', expenses) }, [expenses, isAppReady, saveToLocalStorage]);
-  useEffect(() => { if (isAppReady) saveToLocalStorage('costCenters', costCenters) }, [costCenters, isAppReady, saveToLocalStorage]);
-  useEffect(() => { if (isAppReady) saveToLocalStorage('projectCodes', projectCodes) }, [projectCodes, isAppReady, saveToLocalStorage]);
-  useEffect(() => { if (isAppReady) saveToLocalStorage('expensesCategories', expensesCategories) }, [expensesCategories, isAppReady, saveToLocalStorage]);
-  useEffect(() => { if (isAppReady) saveToLocalStorage('parties', parties) }, [parties, isAppReady, saveToLocalStorage]);
-  useEffect(() => { if (isAppReady) saveToLocalStorage('companyInfo', companyInfo) }, [companyInfo, isAppReady, saveToLocalStorage]);
-  useEffect(() => { if (isAppReady) saveToLocalStorage('logo', logo) }, [logo, isAppReady, saveToLocalStorage]);
+const App: React.FC = () => {
+  // --- STATE INITIALIZATION ---
+  // Initialize state DIRECTLY from localStorage to prevent race conditions.
+  const [users, setUsers] = useState<User[]>(() => loadFromLocalStorage('users', []));
+  const [expenses, setExpenses] = useState<Expense[]>(() => loadFromLocalStorage('expenses', []));
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(() => loadFromLocalStorage('companyInfo', null));
+  const [logo, setLogo] = useState<string | null>(() => loadFromLocalStorage('logo', null));
+  const [costCenters, setCostCenters] = useState<MasterData[]>(() => loadFromLocalStorage('costCenters', [{id: 'cc-1', name: 'Internal Project'}, {id: 'cc-2', name: 'Client Project A'}]));
+  const [projectCodes, setProjectCodes] = useState<MasterData[]>(() => loadFromLocalStorage('projectCodes', [{id: 'pc-1', name: 'PROJ-001'}, {id: 'pc-2', name: 'PROJ-002'}]));
+  const [expensesCategories, setExpensesCategories] = useState<MasterData[]>(() => loadFromLocalStorage('expensesCategories', [{id: 'ec-1', name: 'Office Supplies'}, {id: 'ec-2', name: 'Travel'}]));
+  const [parties, setParties] = useState<MasterData[]>(() => loadFromLocalStorage('parties', [{id: 'p-1', name: 'Amazon'}, {id: 'p-2', name: 'Client X'}]));
+
+  const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
+
+  // --- PERSISTENCE EFFECTS ---
+  // Use useEffect to save to localStorage whenever state changes.
+  useEffect(() => { saveToLocalStorage('users', users) }, [users]);
+  useEffect(() => { saveToLocalStorage('expenses', expenses) }, [expenses]);
+  useEffect(() => { saveToLocalStorage('costCenters', costCenters) }, [costCenters]);
+  useEffect(() => { saveToLocalStorage('projectCodes', projectCodes) }, [projectCodes]);
+  useEffect(() => { saveToLocalStorage('expensesCategories', expensesCategories) }, [expensesCategories]);
+  useEffect(() => { saveToLocalStorage('parties', parties) }, [parties]);
+  useEffect(() => { saveToLocalStorage('companyInfo', companyInfo) }, [companyInfo]);
+  useEffect(() => { saveToLocalStorage('logo', logo) }, [logo]);
 
   // --- Auth and User Management ---
-  const handleAdminSetup = useCallback((adminData: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, companyData: CompanyInfo) => {
+  const handleAdminSetup = useCallback((adminData: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, companyData: CompanyInfo): { success: boolean, message?: string } => {
+    // CRITICAL SECURITY FIX: Prevent setup if users already exist.
+    if (users.length > 0) {
+        console.error("Setup attempted when users already exist.");
+        return { success: false, message: "Setup has already been completed. Please log in." };
+    }
+    
     const newAdmin: User = {
         ...adminData,
         id: `admin-${Date.now()}`,
@@ -101,7 +92,8 @@ const App: React.FC = () => {
     setUsers([newAdmin]);
     setCompanyInfo(companyData);
     setLoggedInUser(newAdmin);
-  }, []);
+    return { success: true };
+  }, [users]); // Depend on users to get the latest state
   
   const handleLogin = useCallback((email: string, pass: string): boolean => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
@@ -229,11 +221,6 @@ const App: React.FC = () => {
     users, addUser, updateUser, deleteUser
   }), [users, addUser, updateUser, deleteUser]);
 
-  // --- Render Logic ---
-  if (!isAppReady) {
-    return <div className="flex items-center justify-center min-h-screen">Loading Application...</div>;
-  }
-  
   // The decision to show setup or login is now based on the fully loaded user state
   const isInitialSetup = users.length === 0;
 

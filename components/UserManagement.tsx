@@ -1,5 +1,5 @@
 
-import React, { useState, useCallback } from 'react';
+import React, { useState } from 'react';
 import { User } from '../types';
 import { EditIcon } from './icons/EditIcon';
 import { DeleteIcon } from './icons/DeleteIcon';
@@ -48,7 +48,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
 
   const handleUpdateUser = () => {
     if (editingUser) {
-        // Prevent editing email to an existing one
         if (users.some(u => u.email.toLowerCase() === editingUser.email.toLowerCase() && u.id !== editingUser.id)) {
             alert("A user with this email already exists.");
             return;
@@ -70,45 +69,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
     setNewUser({ name: '', email: '', role: 'user' });
   }
 
-  const renderUserRow = (user: User) => (
-    <tr key={user.id} className="hover:bg-gray-50">
-      {editingUser?.id === user.id ? (
-        <>
-          <td className="px-6 py-4"><input type="text" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} className="form-input" /></td>
-          <td className="px-6 py-4"><input type="email" value={editingUser.email} onChange={e => setEditingUser({...editingUser, email: e.target.value})} className="form-input" /></td>
-          <td className="px-6 py-4">
-            <select value={editingUser.role} onChange={e => setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin'})} className="form-select">
-              <option value="user">User</option>
-              <option value="admin">Admin</option>
-            </select>
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-            <div className="flex items-center justify-end space-x-3">
-              <button onClick={handleUpdateUser} className="text-secondary hover:text-green-700" title="Save"><SaveIcon className="w-5 h-5"/></button>
-              <button onClick={() => setEditingUser(null)} className="text-gray-500 hover:text-gray-700" title="Cancel"><CancelIcon className="w-5 h-5"/></button>
-            </div>
-          </td>
-        </>
-      ) : (
-        <>
-          <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
-          <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">
-            <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{user.role}</span>
-          </td>
-          <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-            <div className="flex items-center justify-end space-x-3">
-              <button onClick={() => setEditingUser(user)} className="text-primary hover:text-indigo-900" title="Edit"><EditIcon className="w-5 h-5"/></button>
-              <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900" title="Delete"><DeleteIcon className="w-5 h-5"/></button>
-            </div>
-          </td>
-        </>
-      )}
-    </tr>
-  );
-
   return (
-    <div className="bg-white p-6 rounded-xl shadow-lg space-y-6">
+    <div className="bg-white p-4 sm:p-6 rounded-xl shadow-lg space-y-6">
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold text-gray-800">User Management</h3>
         {!isAdding && (
@@ -143,7 +105,8 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
         </div>
       )}
       
-      <div className="overflow-x-auto">
+      {/* Desktop Table */}
+      <div className="hidden md:block overflow-x-auto">
         <table className="min-w-full divide-y divide-gray-200">
           <thead className="bg-gray-50">
             <tr>
@@ -154,9 +117,76 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
             </tr>
           </thead>
           <tbody className="bg-white divide-y divide-gray-200">
-            {users.map(renderUserRow)}
+            {users.map(user => (
+               editingUser?.id === user.id ? (
+                <tr key={user.id}>
+                  <td className="px-6 py-4"><input type="text" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} className="form-input" /></td>
+                  <td className="px-6 py-4"><input type="email" value={editingUser.email} onChange={e => setEditingUser({...editingUser, email: e.target.value})} className="form-input" /></td>
+                  <td className="px-6 py-4">
+                    <select value={editingUser.role} onChange={e => setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin'})} className="form-select">
+                      <option value="user">User</option>
+                      <option value="admin">Admin</option>
+                    </select>
+                  </td>
+                  <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                    <div className="flex items-center justify-end space-x-3">
+                      <button onClick={handleUpdateUser} className="text-secondary hover:text-green-700" aria-label="Save changes"><SaveIcon className="w-5 h-5"/></button>
+                      <button onClick={() => setEditingUser(null)} className="text-gray-500 hover:text-gray-700" aria-label="Cancel editing"><CancelIcon className="w-5 h-5"/></button>
+                    </div>
+                  </td>
+                </tr>
+               ) : (
+                <tr key={user.id} className="hover:bg-gray-50">
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{user.name}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{user.email}</td>
+                    <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">
+                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{user.role}</span>
+                    </td>
+                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        <div className="flex items-center justify-end space-x-3">
+                        <button onClick={() => setEditingUser(user)} className="text-primary hover:text-indigo-900" aria-label={`Edit user ${user.name}`}><EditIcon className="w-5 h-5"/></button>
+                        <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900" aria-label={`Delete user ${user.name}`}><DeleteIcon className="w-5 h-5"/></button>
+                        </div>
+                    </td>
+                </tr>
+               )
+            ))}
           </tbody>
         </table>
+      </div>
+      
+      {/* Mobile Card View */}
+      <div className="md:hidden divide-y divide-gray-200">
+        {users.map(user => (
+          editingUser?.id === user.id ? (
+            <div key={user.id} className="p-4 space-y-4">
+               <input type="text" value={editingUser.name} onChange={e => setEditingUser({...editingUser, name: e.target.value})} className="form-input w-full" placeholder="Name" />
+               <input type="email" value={editingUser.email} onChange={e => setEditingUser({...editingUser, email: e.target.value})} className="form-input w-full" placeholder="Email"/>
+               <select value={editingUser.role} onChange={e => setEditingUser({...editingUser, role: e.target.value as 'user' | 'admin'})} className="form-select w-full">
+                  <option value="user">User</option>
+                  <option value="admin">Admin</option>
+                </select>
+                <div className="flex items-center justify-end space-x-3">
+                  <button onClick={handleUpdateUser} className="text-secondary hover:text-green-700" aria-label="Save changes"><SaveIcon className="w-5 h-5"/></button>
+                  <button onClick={() => setEditingUser(null)} className="text-gray-500 hover:text-gray-700" aria-label="Cancel editing"><CancelIcon className="w-5 h-5"/></button>
+                </div>
+            </div>
+          ) : (
+            <div key={user.id} className="p-4 flex justify-between items-center">
+                <div>
+                    <p className="text-sm font-medium text-gray-900">{user.name}</p>
+                    <p className="text-sm text-gray-500">{user.email}</p>
+                    <p className="text-xs capitalize mt-1">
+                        <span className={`px-2 inline-flex leading-5 font-semibold rounded-full ${user.role === 'admin' ? 'bg-blue-100 text-blue-800' : 'bg-gray-100 text-gray-800'}`}>{user.role}</span>
+                    </p>
+                </div>
+                 <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
+                    <button onClick={() => setEditingUser(user)} className="text-primary hover:text-indigo-900" aria-label={`Edit user ${user.name}`}><EditIcon className="w-5 h-5"/></button>
+                    <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900" aria-label={`Delete user ${user.name}`}><DeleteIcon className="w-5 h-5"/></button>
+                </div>
+            </div>
+          )
+        ))}
       </div>
     </div>
   );

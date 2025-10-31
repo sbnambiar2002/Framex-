@@ -66,7 +66,6 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const handleEdit = (expense: Expense) => {
     setEditingExpense(expense);
     setIsFormVisible(true);
-    setActiveTab('entries'); // Switch to entries tab if editing from another view
   };
 
   const handleFormClose = () => {
@@ -82,9 +81,9 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   const handleExportCSV = useCallback(() => {
     const usersMap = new Map(userManagementProps.users.map(user => [user.id, user.name]));
     
-    // Helper to escape CSV fields
-    const escapeCSV = (str: string | number) => {
-        const stringVal = String(str);
+    // FIX: Argument of type 'unknown' is not assignable to parameter of type 'string | number'. Changed parameter to unknown and handled safely.
+    const escapeCSV = (str: unknown) => {
+        const stringVal = String(str ?? '');
         if (stringVal.includes(',') || stringVal.includes('"') || stringVal.includes('\n')) {
             return `"${stringVal.replace(/"/g, '""')}"`;
         }
@@ -161,39 +160,25 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
       case 'entries':
         return (
           <>
-            {isFormVisible ? (
-            <ExpenseForm
-                currentUser={currentUser}
-                addExpense={addExpense}
-                updateExpense={updateExpense}
-                editingExpense={editingExpense}
-                onClose={handleFormClose}
-                allUsers={allUsers}
-                costCenters={masterDataProps.costCenters}
-                projectCodes={masterDataProps.projectCodes}
-                expensesCategories={masterDataProps.expensesCategories}
-                parties={masterDataProps.parties}
-                addParty={masterDataProps.addParty}
-            />
-            ) : (
-            <div className="text-right flex justify-end space-x-4">
+            <div className="flex flex-col sm:flex-row justify-end sm:space-x-4 space-y-2 sm:space-y-0 mb-6">
                 <button
                     onClick={handleExportCSV}
-                    className="inline-flex items-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105"
+                    className="inline-flex items-center justify-center px-6 py-3 border border-gray-300 text-base font-medium rounded-lg shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105 disabled:opacity-50 disabled:scale-100"
                     disabled={expenses.length === 0}
+                    aria-label="Export all entries to a CSV file"
                 >
                     <DownloadIcon className="w-5 h-5 mr-2" />
                     Export to CSV
                 </button>
                 <button
                     onClick={handleAddNew}
-                    className="inline-flex items-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105"
+                    className="inline-flex items-center justify-center px-6 py-3 border border-transparent text-base font-medium rounded-lg shadow-sm text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-transform transform hover:scale-105"
+                    aria-label="Add a new expense entry"
                 >
                     <PlusIcon className="w-5 h-5 mr-2" />
                     Add New Entry
                 </button>
             </div>
-            )}
             
             <ExpenseList
               expenses={expenses}
@@ -255,6 +240,32 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         </div>
       </div>
       
+      {isFormVisible && (
+        <div 
+          className="fixed inset-0 bg-gray-900 bg-opacity-75 z-40 flex items-center justify-center p-4"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div 
+            className="w-full max-w-4xl max-h-full overflow-y-auto bg-white rounded-xl shadow-lg"
+          >
+              <ExpenseForm
+                currentUser={currentUser}
+                addExpense={addExpense}
+                updateExpense={updateExpense}
+                editingExpense={editingExpense}
+                onClose={handleFormClose}
+                allUsers={allUsers}
+                costCenters={masterDataProps.costCenters}
+                projectCodes={masterDataProps.projectCodes}
+                expensesCategories={masterDataProps.expensesCategories}
+                parties={masterDataProps.parties}
+                addParty={masterDataProps.addParty}
+              />
+          </div>
+        </div>
+      )}
+
       <div className="border-b border-gray-200">
         <nav className="-mb-px flex space-x-8 overflow-x-auto" aria-label="Tabs">
             {TABS.map(tab => 

@@ -10,10 +10,10 @@ interface ExpenseListProps {
   onEdit: (expense: Expense) => void;
   onDelete: (id: string) => void;
   currentUser: User;
-  allUsers: User[]; // This now includes all users (admins and regular users)
+  allUsers: User[]; 
 }
 
-const ExpenseList: React.FC<ExpenseListProps> = ({ expenses, onEdit, onDelete, currentUser, allUsers }) => {
+const ExpenseList: React.FC<ExpenseListProps> = ({ expenses, onEdit, onDelete, allUsers }) => {
   const usersMap = new Map(allUsers.map(user => [user.id, user.name]));
 
   const handleDelete = (id: string) => {
@@ -34,61 +34,90 @@ const ExpenseList: React.FC<ExpenseListProps> = ({ expenses, onEdit, onDelete, c
 
   return (
     <div className="bg-white rounded-xl shadow-lg overflow-hidden">
-        <div className="overflow-x-auto">
+        {/* Desktop Table View */}
+        <div className="hidden md:block overflow-x-auto">
             <table className="min-w-full divide-y divide-gray-200">
-            <thead className="bg-gray-50">
-                <tr>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid To / Received From</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
-                <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Cost Center</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Project Code</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expenses Category</th>
-                <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Nature</th>
-                <th scope="col" className="relative px-6 py-3">
-                    <span className="sr-only">Actions</span>
-                </th>
-                </tr>
-            </thead>
-            <tbody className="bg-white divide-y divide-gray-200">
-                {expenses.map((expense) => (
-                <tr key={expense.id} className="hover:bg-gray-50 transition-colors">
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(expense.timestamp).toLocaleDateString()}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{usersMap.get(expense.paidBy) || 'Unknown User'}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">
-                        <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${expense.transactionType === 'payment' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                            {expense.transactionType}
-                        </span>
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.party}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600 text-right">
-                        {expense.transactionType === 'payment' ? expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600 text-right">
-                        {expense.transactionType === 'receipt' ? expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
-                    </td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.costCenter}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.projectCode}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{expense.expensesCategory}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500 max-w-xs truncate" title={expense.expenseNature}>{expense.expenseNature}</td>
-                    <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                        <div className="flex items-center justify-end space-x-3">
-                            <button onClick={() => onEdit(expense)} className="text-primary hover:text-indigo-900" title="Edit">
-                                <EditIcon className="w-5 h-5"/>
-                            </button>
-                            <button onClick={() => handleDelete(expense.id)} className="text-red-600 hover:text-red-900" title="Delete">
-                                <DeleteIcon className="w-5 h-5"/>
-                            </button>
-                        </div>
-                    </td>
-                </tr>
-                ))}
-            </tbody>
+              <thead className="bg-gray-50">
+                  <tr>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">User</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Type</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Paid To / Received From</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                    <th scope="col" className="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">Receipt</th>
+                    <th scope="col" className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Expenses Category</th>
+                    <th scope="col" className="relative px-6 py-3"><span className="sr-only">Actions</span></th>
+                  </tr>
+              </thead>
+              <tbody className="bg-white divide-y divide-gray-200">
+                  {expenses.map((expense) => (
+                  <tr key={expense.id} className="hover:bg-gray-50 transition-colors">
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(expense.timestamp).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{usersMap.get(expense.paidBy) || 'Unknown User'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${expense.transactionType === 'payment' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                              {expense.transactionType}
+                          </span>
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.party}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600 text-right">
+                          {expense.transactionType === 'payment' ? expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600 text-right">
+                          {expense.transactionType === 'receipt' ? expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                      </td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" title={`${expense.costCenter} / ${expense.projectCode}`}>{expense.expensesCategory}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                          <div className="flex items-center justify-end space-x-3">
+                              <button onClick={() => onEdit(expense)} className="text-primary hover:text-indigo-900" aria-label={`Edit expense for ${expense.party}`}>
+                                  <EditIcon className="w-5 h-5"/>
+                              </button>
+                              <button onClick={() => handleDelete(expense.id)} className="text-red-600 hover:text-red-900" aria-label={`Delete expense for ${expense.party}`}>
+                                  <DeleteIcon className="w-5 h-5"/>
+                              </button>
+                          </div>
+                      </td>
+                  </tr>
+                  ))}
+              </tbody>
             </table>
-      </div>
+        </div>
+
+        {/* Mobile Card View */}
+        <div className="md:hidden divide-y divide-gray-200">
+          {expenses.map(expense => (
+            <div key={expense.id} className="p-4 space-y-3">
+              <div className="flex justify-between items-start">
+                  <div>
+                      <p className="text-sm font-bold text-gray-900">{expense.party}</p>
+                      <p className="text-xs text-gray-500">
+                        {new Date(expense.timestamp).toLocaleDateString()} &bull; {usersMap.get(expense.paidBy) || 'Unknown'}
+                      </p>
+                  </div>
+                  <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
+                      <button onClick={() => onEdit(expense)} className="text-primary hover:text-indigo-900" aria-label={`Edit expense for ${expense.party}`}><EditIcon className="w-5 h-5"/></button>
+                      <button onClick={() => handleDelete(expense.id)} className="text-red-600 hover:text-red-900" aria-label={`Delete expense for ${expense.party}`}><DeleteIcon className="w-5 h-5"/></button>
+                  </div>
+              </div>
+
+              <div className="flex justify-between items-center">
+                  <div>
+                    <p className="text-xs text-gray-500">{expense.expensesCategory}</p>
+                    <p className="text-xs text-gray-500 truncate" title={expense.expenseNature}>{expense.expenseNature}</p>
+                  </div>
+                  {expense.transactionType === 'payment' ? (
+                     <p className="text-lg font-bold text-red-600">
+                       -{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                     </p>
+                  ) : (
+                     <p className="text-lg font-bold text-green-600">
+                       +{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                     </p>
+                  )}
+              </div>
+            </div>
+          ))}
+        </div>
     </div>
   );
 };

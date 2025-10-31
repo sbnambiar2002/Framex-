@@ -5,7 +5,7 @@ import { COUNTRIES } from '../constants';
 
 interface AuthPageProps {
   onLogin: (email: string, pass: string) => boolean;
-  onSetup: (admin: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, company: CompanyInfo) => void;
+  onSetup: (admin: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, company: CompanyInfo) => { success: boolean, message?: string };
   isInitialSetup: boolean;
 }
 
@@ -81,11 +81,14 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup })
       }
     };
 
-    onSetup(adminData, companyData);
+    const result = onSetup(adminData, companyData);
+    if (!result.success) {
+        setSetupError(result.message || "An unexpected error occurred during setup.");
+    }
   };
   
   const setupInputClasses = "block w-full px-1 py-2 bg-transparent border-0 border-b-2 border-gray-200 focus:ring-0 focus:border-primary transition-colors sm:text-sm";
-  const loginInputClasses = "relative block w-full px-4 py-3 text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
+  const loginInputClasses = "relative block w-full px-4 py-3 bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
 
   const renderLoginView = () => (
     <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl">
