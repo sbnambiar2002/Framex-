@@ -104,6 +104,23 @@ const App: React.FC = () => {
     return false;
   }, [users]);
 
+  const handleSignUp = useCallback((userData: Omit<User, 'id' | 'role' | 'forcePasswordChange' | 'mobile'> & {password: string}): { success: boolean, message?: string } => {
+    if (users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
+        return { success: false, message: 'A user with this email already exists.' };
+    }
+    const newUser: User = {
+        name: userData.name,
+        email: userData.email,
+        password: userData.password,
+        id: `user-${Date.now()}`,
+        role: 'user',
+        forcePasswordChange: false,
+    };
+    setUsers(prev => [...prev, newUser]);
+    setLoggedInUser(newUser); // Auto-login after signup
+    return { success: true };
+  }, [users]);
+
   const handleLogout = useCallback(() => {
     setLoggedInUser(null);
   }, []);
@@ -229,6 +246,7 @@ const App: React.FC = () => {
       <AuthPage
         onLogin={handleLogin}
         onSetup={handleAdminSetup}
+        onSignUp={handleSignUp}
         isInitialSetup={isInitialSetup}
         companyInfo={companyInfo}
       />
