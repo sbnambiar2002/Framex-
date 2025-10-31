@@ -236,8 +236,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, onSignUp, isIniti
         <div className="mt-8 space-y-4">
             <button
               onClick={() => setView('login')}
-              disabled={isInitialSetup}
-              className="relative flex justify-center w-full px-4 py-3 text-sm font-medium text-white bg-primary border border-transparent rounded-lg group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:bg-gray-400 disabled:cursor-not-allowed"
+              className="relative flex justify-center w-full px-4 py-3 text-sm font-medium text-white bg-primary border border-transparent rounded-lg group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors"
             >
               Log In
             </button>

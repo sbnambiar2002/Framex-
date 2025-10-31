@@ -35,18 +35,22 @@ export const onAuthStateChange = (callback: (event: string, session: any) => voi
 }
 
 export const checkIsInitialSetup = async (): Promise<boolean> => {
-    // This check is more reliable than counting users, as the `users` table may have
-    // Row Level Security enabled, preventing an anonymous check. The company_info
-    // table is created during setup and is a better indicator of completion.
-    const { data, error } = await supabase.from('company_info').select('id').eq('id', 1).maybeSingle();
-    
+    // Reverted to the original user count check.
+    // The previous check for 'company_info' failed in some configurations,
+    // likely due to Row Level Security policies not allowing anonymous access.
+    // This user count method, while potentially unreliable if RLS is enabled on the `users` table
+    // without a permissive policy, was confirmed to be working for the user's setup.
+    const { count, error } = await supabase.from('users').select('*', { count: 'exact', head: true });
+
     if (error) {
         console.error("Error checking for initial setup:", error);
-        return true; // Fail safe, assume setup is needed if DB check fails.
+        // If the query fails (e.g., due to permissions), it's safer to assume
+        // setup is needed to avoid locking a new user out.
+        return true;
     }
     
-    // If data is null, it means no company info row was found, so setup is needed.
-    return data === null;
+    // If there are 0 users in the public.users table, we need to run the initial setup.
+    return count === 0;
 }
 
 export const adminSetup = async (adminData: Omit<User, 'id' | 'role' | 'forcePasswordChange'> & { password: string }, companyData: Omit<CompanyInfo, 'id' | 'logo_url'>) => {
