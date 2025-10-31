@@ -1,16 +1,17 @@
 import React from 'react';
+import { CompanyInfo } from '../types';
 
-const Footer: React.FC = () => {
+interface FooterProps {
+    companyInfo: CompanyInfo | null;
+}
+
+const Footer: React.FC<FooterProps> = ({ companyInfo }) => {
   const currentYear = new Date().getFullYear();
   return (
     <footer className="py-4 px-4 sm:px-6 lg:px-8">
       <div className="text-center text-sm text-gray-500">
         <p>
-          Powered by{' '}
-          <a href="#" target="_blank" rel="noopener noreferrer" className="font-medium text-primary hover:text-indigo-700 hover:underline">
-            Framex Technologies
-          </a>
-          . © {currentYear} All Rights Reserved.
+          {companyInfo ? companyInfo.name : 'Expense Tracker'} © {currentYear} All Rights Reserved.
         </p>
       </div>
     </footer>

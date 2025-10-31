@@ -57,10 +57,10 @@ const App: React.FC = () => {
   const [expenses, setExpenses] = useState<Expense[]>(() => loadFromLocalStorage('expenses', []));
   const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(() => loadFromLocalStorage('companyInfo', null));
   const [logo, setLogo] = useState<string | null>(() => loadFromLocalStorage('logo', null));
-  const [costCenters, setCostCenters] = useState<MasterData[]>(() => loadFromLocalStorage('costCenters', [{id: 'cc-1', name: 'Internal Project'}, {id: 'cc-2', name: 'Client Project A'}]));
-  const [projectCodes, setProjectCodes] = useState<MasterData[]>(() => loadFromLocalStorage('projectCodes', [{id: 'pc-1', name: 'PROJ-001'}, {id: 'pc-2', name: 'PROJ-002'}]));
-  const [expensesCategories, setExpensesCategories] = useState<MasterData[]>(() => loadFromLocalStorage('expensesCategories', [{id: 'ec-1', name: 'Office Supplies'}, {id: 'ec-2', name: 'Travel'}]));
-  const [parties, setParties] = useState<MasterData[]>(() => loadFromLocalStorage('parties', [{id: 'p-1', name: 'Amazon'}, {id: 'p-2', name: 'Client X'}]));
+  const [costCenters, setCostCenters] = useState<MasterData[]>(() => loadFromLocalStorage('costCenters', []));
+  const [projectCodes, setProjectCodes] = useState<MasterData[]>(() => loadFromLocalStorage('projectCodes', []));
+  const [expensesCategories, setExpensesCategories] = useState<MasterData[]>(() => loadFromLocalStorage('expensesCategories', []));
+  const [parties, setParties] = useState<MasterData[]>(() => loadFromLocalStorage('parties', []));
 
   const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
 
@@ -230,6 +230,7 @@ const App: React.FC = () => {
         onLogin={handleLogin}
         onSetup={handleAdminSetup}
         isInitialSetup={isInitialSetup}
+        companyInfo={companyInfo}
       />
     );
   }
@@ -259,7 +260,7 @@ const App: React.FC = () => {
           userManagementProps={userManagementProps}
         />
       </main>
-      <Footer />
+      <Footer companyInfo={companyInfo} />
     </div>
   );
 };

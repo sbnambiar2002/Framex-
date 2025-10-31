@@ -1,8 +1,7 @@
-
 import React from 'react';
 import { User, CompanyInfo } from '../types';
 import { LogoUpload } from './LogoUpload';
-import { FramexLogo } from './FramexLogo';
+import { AppLogo } from './AppLogo';
 import { LogoutIcon } from './icons/LogoutIcon';
 
 interface HeaderProps {
@@ -19,7 +18,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, logo, onLogoUplo
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-24">
           <div className="flex items-center space-x-4">
-            <FramexLogo className="h-8 w-auto" />
+            <AppLogo companyInfo={companyInfo} className="h-8 w-auto" />
             <div className="hidden sm:block border-l pl-4 border-gray-200">
               <h1 className="text-2xl font-bold text-gray-800">
                 Expense Tracker

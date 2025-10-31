@@ -1,4 +1,3 @@
-
 import React, { useState } from 'react';
 import { User } from '../types';
 import { EditIcon } from './icons/EditIcon';
@@ -6,6 +5,7 @@ import { DeleteIcon } from './icons/DeleteIcon';
 import { PlusIcon } from './icons/PlusIcon';
 import { SaveIcon } from './icons/SaveIcon';
 import { CancelIcon } from './icons/CancelIcon';
+import { KeyIcon } from './icons/KeyIcon';
 
 interface UserManagementProps {
   users: User[];
@@ -24,6 +24,12 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [newUser, setNewUser] = useState({ name: '', email: '', role: 'user' as 'user' | 'admin' });
   const [tempPassword, setTempPassword] = useState('');
+  const [passwordResetInfo, setPasswordResetInfo] = useState<{ userName: string; tempPass: string } | null>(null);
+
+  const handleStartAdding = () => {
+    setIsAdding(true);
+    setPasswordResetInfo(null); // Clear reset info when starting to add user
+  }
 
   const handleAddUser = (e: React.FormEvent) => {
     e.preventDefault();
@@ -43,7 +49,6 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
     });
     setTempPassword(password); // Show the password to the admin
     setNewUser({ name: '', email: '', role: 'user' }); // Reset form
-    // Keep isAdding true to show the password, user can close it manually
   };
 
   const handleUpdateUser = () => {
@@ -63,6 +68,23 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
       }
   };
   
+  const handleResetPassword = (userId: string) => {
+    const userToReset = users.find(u => u.id === userId);
+    if (!userToReset) return;
+
+    if (window.confirm(`Are you sure you want to reset the password for ${userToReset.name}?`)) {
+        const newTempPassword = generateTempPassword();
+        updateUser({
+            ...userToReset,
+            password: newTempPassword,
+            forcePasswordChange: true,
+        });
+        setPasswordResetInfo({ userName: userToReset.name, tempPass: newTempPassword });
+        setIsAdding(false);
+        setTempPassword('');
+    }
+  }
+
   const closeAddForm = () => {
     setIsAdding(false);
     setTempPassword('');
@@ -74,7 +96,7 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
       <div className="flex justify-between items-center">
         <h3 className="text-xl font-bold text-gray-800">User Management</h3>
         {!isAdding && (
-            <button onClick={() => setIsAdding(true)} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-indigo-700">
+            <button onClick={handleStartAdding} className="inline-flex items-center px-4 py-2 border border-transparent text-sm font-medium rounded-md shadow-sm text-white bg-primary hover:bg-indigo-700">
                 <PlusIcon className="w-5 h-5 mr-2" /> Add User
             </button>
         )}
@@ -102,6 +124,13 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
                 <p className="mt-1 text-xs">They will be required to change this password on their first login. This password will not be shown again.</p>
             </div>
           )}
+        </div>
+      )}
+      
+      {passwordResetInfo && (
+        <div className="mt-4 p-3 bg-blue-100 border border-blue-300 rounded-md text-sm text-blue-800">
+            <strong>Password for {passwordResetInfo.userName} has been reset!</strong> Please provide them with the following new temporary password: <strong className="font-mono bg-blue-200 px-1 rounded">{passwordResetInfo.tempPass}</strong>
+            <p className="mt-1 text-xs">They will be required to change this password on their next login. This password will not be shown again.</p>
         </div>
       )}
       
@@ -144,8 +173,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                         <div className="flex items-center justify-end space-x-3">
-                        <button onClick={() => setEditingUser(user)} className="text-primary hover:text-indigo-900" aria-label={`Edit user ${user.name}`}><EditIcon className="w-5 h-5"/></button>
-                        <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900" aria-label={`Delete user ${user.name}`}><DeleteIcon className="w-5 h-5"/></button>
+                          <button onClick={() => handleResetPassword(user.id)} className="text-yellow-500 hover:text-yellow-700" aria-label={`Reset password for ${user.name}`} title="Reset Password"><KeyIcon className="w-5 h-5"/></button>
+                          <button onClick={() => setEditingUser(user)} className="text-primary hover:text-indigo-900" aria-label={`Edit user ${user.name}`} title="Edit User"><EditIcon className="w-5 h-5"/></button>
+                          <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900" aria-label={`Delete user ${user.name}`} title="Delete User"><DeleteIcon className="w-5 h-5"/></button>
                         </div>
                     </td>
                 </tr>
@@ -181,8 +211,9 @@ const UserManagement: React.FC<UserManagementProps> = ({ users, addUser, updateU
                     </p>
                 </div>
                  <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
-                    <button onClick={() => setEditingUser(user)} className="text-primary hover:text-indigo-900" aria-label={`Edit user ${user.name}`}><EditIcon className="w-5 h-5"/></button>
-                    <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900" aria-label={`Delete user ${user.name}`}><DeleteIcon className="w-5 h-5"/></button>
+                    <button onClick={() => handleResetPassword(user.id)} className="text-yellow-500 hover:text-yellow-700" aria-label={`Reset password for ${user.name}`} title="Reset Password"><KeyIcon className="w-5 h-5"/></button>
+                    <button onClick={() => setEditingUser(user)} className="text-primary hover:text-indigo-900" aria-label={`Edit user ${user.name}`} title="Edit User"><EditIcon className="w-5 h-5"/></button>
+                    <button onClick={() => handleDeleteUser(user.id)} className="text-red-600 hover:text-red-900" aria-label={`Delete user ${user.name}`} title="Delete User"><DeleteIcon className="w-5 h-5"/></button>
                 </div>
             </div>
           )

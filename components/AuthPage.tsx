@@ -1,21 +1,18 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { User, CompanyInfo } from '../types';
-import { FramexLogo } from './FramexLogo';
+import { AppLogo } from './AppLogo';
 import { COUNTRIES } from '../constants';
 
 interface AuthPageProps {
   onLogin: (email: string, pass: string) => boolean;
   onSetup: (admin: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, company: CompanyInfo) => { success: boolean, message?: string };
   isInitialSetup: boolean;
+  companyInfo: CompanyInfo | null;
 }
 
-const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup }) => {
-  const [isLoginView, setIsLoginView] = useState(!isInitialSetup);
-
-  useEffect(() => {
-    // This ensures the view switches correctly if the setup is completed.
-    setIsLoginView(!isInitialSetup);
-  }, [isInitialSetup]);
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup, companyInfo }) => {
+  const [view, setView] = useState<'welcome' | 'login' | 'signup'>('welcome');
+  const [showForgotPassword, setShowForgotPassword] = useState(false);
 
   // --- Login Form Logic ---
   const [loginEmail, setLoginEmail] = useState('');
@@ -89,13 +86,59 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup })
   
   const setupInputClasses = "block w-full px-1 py-2 bg-transparent border-0 border-b-2 border-gray-200 focus:ring-0 focus:border-primary transition-colors sm:text-sm";
   const loginInputClasses = "relative block w-full px-4 py-3 bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
+  
+  const BackButton = ({ onClick }: { onClick: () => void }) => (
+    <button
+      type="button"
+      onClick={onClick}
+      className="absolute top-4 left-4 text-sm font-medium text-primary hover:text-indigo-500 flex items-center"
+    >
+      <svg xmlns="http://www.w3.org/2000/svg" className="h-4 w-4 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+      </svg>
+      Back
+    </button>
+  );
+
+  const renderWelcomeView = () => (
+     <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl text-center">
+        <div className="flex flex-col items-center">
+            <AppLogo companyInfo={companyInfo} className="h-12 w-auto" />
+            <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Welcome</h2>
+            <p className="mt-2 text-sm text-gray-600">Your simple solution for expense tracking.</p>
+        </div>
+        <div className="space-y-4">
+            <button 
+              onClick={() => setView('login')}
+              disabled={isInitialSetup}
+              className="w-full px-4 py-3 text-sm font-medium text-white bg-primary border border-transparent rounded-lg group hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:bg-gray-300 disabled:cursor-not-allowed"
+            >
+              Log In
+            </button>
+             <button 
+              onClick={() => setView('signup')}
+              disabled={!isInitialSetup}
+              className="w-full px-4 py-3 text-sm font-medium text-primary bg-indigo-100 border border-transparent rounded-lg group hover:bg-indigo-200 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-colors disabled:bg-gray-100 disabled:text-gray-400 disabled:cursor-not-allowed"
+            >
+              Sign Up (First-time Admin)
+            </button>
+        </div>
+        <div className="text-xs text-gray-500">
+            {isInitialSetup ? 
+                <p>First time here? Click "Sign Up" to get started.</p> :
+                <p>Your company is already set up. Please log in.</p>
+            }
+        </div>
+     </div>
+  );
 
   const renderLoginView = () => (
-    <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl">
-        <div className="flex flex-col items-center text-center">
-          <FramexLogo className="h-12 w-auto" />
+    <div className="relative w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl">
+        <BackButton onClick={() => setView('welcome')} />
+        <div className="flex flex-col items-center text-center pt-8">
+          <AppLogo companyInfo={companyInfo} className="h-12 w-auto" />
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">User Login</h2>
-          <p className="mt-2 text-sm text-gray-600">Welcome to the Expense Tracker</p>
+          <p className="mt-2 text-sm text-gray-600">Welcome back!</p>
         </div>
         <form className="mt-8 space-y-6" onSubmit={handleLoginSubmit}>
           <div className="space-y-4 rounded-md">
@@ -132,13 +175,28 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup })
             </button>
           </div>
         </form>
+         <div className="mt-4 text-center text-sm">
+            <button
+                type="button"
+                onClick={() => setShowForgotPassword(true)}
+                className="font-medium text-primary hover:text-indigo-500"
+            >
+                Forgot your password?
+            </button>
+        </div>
+        <div className="mt-6 pt-6 border-t border-gray-200 text-center text-sm text-gray-600">
+            <p>
+                <span className="font-semibold">New User?</span> Please contact your administrator to get an account.
+            </p>
+        </div>
       </div>
   );
 
   const renderSetupView = () => (
-    <div className="w-full max-w-3xl p-8 space-y-8 bg-white rounded-2xl shadow-xl">
-        <div className="flex flex-col items-center">
-            <FramexLogo className="h-12 w-auto" />
+    <div className="relative w-full max-w-3xl p-8 space-y-8 bg-white rounded-2xl shadow-xl">
+        <BackButton onClick={() => setView('welcome')} />
+        <div className="flex flex-col items-center pt-8">
+            <AppLogo companyInfo={null} className="h-12 w-auto" />
             <h2 className="mt-6 text-2xl sm:text-3xl font-bold text-center text-gray-800">Admin & Company Setup</h2>
             <p className="mt-2 text-center text-sm text-gray-600">Welcome! Please enter your details to get started.</p>
         </div>
@@ -179,23 +237,46 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup })
         </form>
     </div>
   );
+
+  const renderContent = () => {
+    switch (view) {
+      case 'login':
+        return renderLoginView();
+      case 'signup':
+        return renderSetupView();
+      case 'welcome':
+      default:
+        return renderWelcomeView();
+    }
+  };
   
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-light-gray py-12 px-4 sm:px-6 lg:px-8">
-        {isLoginView ? renderLoginView() : renderSetupView()}
-        <div className="mt-6 text-center text-sm">
-            {isInitialSetup && (
-                <p className="text-gray-600">
-                    {isLoginView ? "Need to setup your company?" : "Already have an account?"}{' '}
-                    <button onClick={() => setIsLoginView(!isLoginView)} className="font-medium text-primary hover:text-indigo-500">
-                        {isLoginView ? "Admin Setup" : "User Login"}
-                    </button>
-                </p>
-            )}
-        </div>
-        <div className="mt-8 text-center text-xs text-gray-500">
-           <p>Powered by <span className="font-semibold">Framex Technologies</span></p>
-        </div>
+        {renderContent()}
+        {showForgotPassword && (
+            <div 
+                className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4"
+                onClick={() => setShowForgotPassword(false)}
+            >
+                <div 
+                    className="bg-white rounded-lg shadow-xl p-8 m-4 max-w-md w-full"
+                    onClick={(e) => e.stopPropagation()}
+                >
+                    <h2 className="text-2xl font-bold text-gray-900">Password Reset</h2>
+                    <p className="mt-4 text-gray-600">
+                        To reset your password, please contact your company's administrator. They will be able to provide you with a temporary password.
+                    </p>
+                    <div className="mt-6">
+                        <button
+                            onClick={() => setShowForgotPassword(false)}
+                            className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+                        >
+                            OK
+                        </button>
+                    </div>
+                </div>
+            </div>
+        )}
     </div>
   );
 };
