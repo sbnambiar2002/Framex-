@@ -103,7 +103,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup, c
   const renderWelcomeView = () => (
      <div className="w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl text-center">
         <div className="flex flex-col items-center">
-            <AppLogo companyInfo={companyInfo} className="h-12 w-auto" />
+            <AppLogo className="h-12 w-auto" />
             <h2 className="mt-6 text-3xl font-extrabold text-gray-900">Welcome</h2>
             <p className="mt-2 text-sm text-gray-600">Your simple solution for expense tracking.</p>
         </div>
@@ -136,7 +136,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup, c
     <div className="relative w-full max-w-md p-8 space-y-8 bg-white rounded-2xl shadow-xl">
         <BackButton onClick={() => setView('welcome')} />
         <div className="flex flex-col items-center text-center pt-8">
-          <AppLogo companyInfo={companyInfo} className="h-12 w-auto" />
+          <AppLogo className="h-12 w-auto" />
           <h2 className="mt-6 text-3xl font-extrabold text-gray-900">User Login</h2>
           <p className="mt-2 text-sm text-gray-600">Welcome back!</p>
         </div>
@@ -196,7 +196,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, isInitialSetup, c
     <div className="relative w-full max-w-3xl p-8 space-y-8 bg-white rounded-2xl shadow-xl">
         <BackButton onClick={() => setView('welcome')} />
         <div className="flex flex-col items-center pt-8">
-            <AppLogo companyInfo={null} className="h-12 w-auto" />
+            <AppLogo className="h-12 w-auto" />
             <h2 className="mt-6 text-2xl sm:text-3xl font-bold text-center text-gray-800">Admin & Company Setup</h2>
             <p className="mt-2 text-center text-sm text-gray-600">Welcome! Please enter your details to get started.</p>
         </div>
