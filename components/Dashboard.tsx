@@ -1,3 +1,4 @@
+
 import React, { useState, useCallback } from 'react';
 import { Expense, User, MasterData } from '../types';
 import ExpenseForm from './ExpenseForm';
@@ -13,35 +14,37 @@ interface MasterDataProps {
   costCenters: MasterData[];
   addCostCenter: (name: string) => void;
   updateCostCenter: (item: MasterData) => void;
+  // FIX: Changed signature to match the implementation in App.tsx. The function is specialized and doesn't need a `type`.
   deleteCostCenter: (id: string) => void;
   
   projectCodes: MasterData[];
   addProjectCode: (name: string) => void;
   updateProjectCode: (item: MasterData) => void;
+  // FIX: Changed signature to match the implementation in App.tsx. The function is specialized and doesn't need a `type`.
   deleteProjectCode: (id: string) => void;
 
   expensesCategories: MasterData[];
   addExpensesCategory: (name: string) => void;
   updateExpensesCategory: (item: MasterData) => void;
+  // FIX: Changed signature to match the implementation in App.tsx. The function is specialized and doesn't need a `type`.
   deleteExpensesCategory: (id: string) => void;
 
   parties: MasterData[];
   addParty: (name: string) => void;
   updateParty: (item: MasterData) => void;
-  deleteParty: (id: string) => void;
+  deleteParty: (id: string, type: string) => void;
 }
 
 interface UserManagementProps {
   users: User[];
-  addUser: (user: Omit<User, 'id'>) => User;
+  addUser: (user: Omit<User, 'id' | 'forcePasswordChange'> & { password?: string, role: 'admin' | 'user' }) => Promise<{ success: boolean, message?: string }>;
   updateUser: (user: User) => void;
-  deleteUser: (id: string) => void;
 }
 
 interface DashboardProps {
   currentUser: User;
   expenses: Expense[];
-  addExpense: (expense: Omit<Expense, 'id' | 'timestamp'>) => void;
+  addExpense: (expense: Omit<Expense, 'id' | 'created_at'>) => void;
   updateExpense: (expense: Expense) => void;
   deleteExpense: (id: string) => void;
   allUsers: User[];
@@ -58,7 +61,7 @@ const TABS = [
 ];
 
 const Dashboard: React.FC<DashboardProps> = (props) => {
-  const { currentUser, expenses, addExpense, updateExpense, deleteExpense, allUsers, masterDataProps, userManagementProps } = props;
+  const { currentUser, expenses, addExpense, updateExpense, deleteExpense, masterDataProps, userManagementProps } = props;
   const [editingExpense, setEditingExpense] = useState<Expense | null>(null);
   const [isFormVisible, setIsFormVisible] = useState(false);
   const [activeTab, setActiveTab] = useState('entries');
@@ -79,8 +82,6 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
   }
 
   const handleExportCSV = useCallback(() => {
-    const usersMap = new Map(userManagementProps.users.map(user => [user.id, user.name]));
-    
     // FIX: Argument of type 'unknown' is not assignable to parameter of type 'string | number'. Changed parameter to unknown and handled safely.
     const escapeCSV = (str: unknown) => {
         const stringVal = String(str ?? '');
@@ -92,7 +93,7 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
     const headers = [
         'Date',
-        ...(currentUser.role === 'admin' ? ['User'] : []),
+        'Paid By',
         'Type',
         'Paid To / Received From',
         'Payment',
@@ -107,16 +108,16 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
 
     expenses.forEach(expense => {
         const row = [
-            escapeCSV(new Date(expense.timestamp).toLocaleDateString()),
-            ...(currentUser.role === 'admin' ? [escapeCSV(usersMap.get(expense.paidBy) || 'Unknown User')] : []),
-            escapeCSV(expense.transactionType),
+            escapeCSV(new Date(expense.created_at).toLocaleDateString()),
+            escapeCSV(expense.paid_by || 'Unknown User'),
+            escapeCSV(expense.transaction_type),
             escapeCSV(expense.party),
-            escapeCSV(expense.transactionType === 'payment' ? expense.amount.toFixed(2) : ''),
-            escapeCSV(expense.transactionType === 'receipt' ? expense.amount.toFixed(2) : ''),
-            escapeCSV(expense.costCenter),
-            escapeCSV(expense.projectCode),
-            escapeCSV(expense.expensesCategory),
-            escapeCSV(expense.expenseNature),
+            escapeCSV(expense.transaction_type === 'payment' ? expense.amount.toFixed(2) : ''),
+            escapeCSV(expense.transaction_type === 'receipt' ? expense.amount.toFixed(2) : ''),
+            escapeCSV(expense.cost_center),
+            escapeCSV(expense.project_code),
+            escapeCSV(expense.expenses_category),
+            escapeCSV(expense.expense_nature),
         ];
         csvRows.push(row.join(','));
     });
@@ -135,10 +136,10 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
         link.click();
         document.body.removeChild(link);
     }
-  }, [expenses, currentUser.role, userManagementProps.users]);
+  }, [expenses]);
 
   const netBalance = expenses.reduce((sum, exp) => {
-    if (exp.transactionType === 'payment') {
+    if (exp.transaction_type === 'payment') {
       return sum - Number(exp.amount);
     }
     return sum + Number(exp.amount);
@@ -185,7 +186,6 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
               onEdit={handleEdit}
               onDelete={deleteExpense}
               currentUser={currentUser}
-              allUsers={userManagementProps.users}
             />
           </>
         );
@@ -255,7 +255,6 @@ const Dashboard: React.FC<DashboardProps> = (props) => {
                 updateExpense={updateExpense}
                 editingExpense={editingExpense}
                 onClose={handleFormClose}
-                allUsers={allUsers}
                 costCenters={masterDataProps.costCenters}
                 projectCodes={masterDataProps.projectCodes}
                 expensesCategories={masterDataProps.expensesCategories}

@@ -1,15 +1,15 @@
-import React, { useState, useEffect, useMemo } from 'react';
+
+import React, { useState, useEffect } from 'react';
 import { Expense, User, MasterData } from '../types';
 import { SaveIcon } from './icons/SaveIcon';
 import { CancelIcon } from './icons/CancelIcon';
 
 interface ExpenseFormProps {
   currentUser: User;
-  addExpense: (expense: Omit<Expense, 'id' | 'timestamp'>) => void;
+  addExpense: (expense: Omit<Expense, 'id' | 'created_at'>) => void;
   updateExpense: (expense: Expense) => void;
   editingExpense: Expense | null;
   onClose: () => void;
-  allUsers: User[];
   costCenters: MasterData[];
   projectCodes: MasterData[];
   expensesCategories: MasterData[];
@@ -17,33 +17,33 @@ interface ExpenseFormProps {
   addParty: (name: string) => void;
 }
 
-const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, updateExpense, editingExpense, onClose, allUsers, costCenters, projectCodes, expensesCategories, parties, addParty }) => {
-  const usersMap = useMemo(() => new Map(allUsers.map(user => [user.id, user.name])), [allUsers]);
+const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, updateExpense, editingExpense, onClose, costCenters, projectCodes, expensesCategories, parties, addParty }) => {
 
   const getInitialFormData = () => ({
-    transactionType: 'payment' as 'payment' | 'receipt',
+    transaction_type: 'payment' as 'payment' | 'receipt',
     party: '',
     amount: '',
-    paidByName: currentUser.name, // Use name for the editable input
-    expenseNature: '',
-    costCenter: '',
-    projectCode: '',
-    expensesCategory: '',
+    paid_by: currentUser.name, // Defaults to the current user's name
+    expense_nature: '',
+    cost_center: '',
+    project_code: '',
+    expenses_category: '',
   });
 
   const [formData, setFormData] = useState(getInitialFormData());
+  const [error, setError] = useState('');
 
   useEffect(() => {
     if (editingExpense) {
       setFormData({
-        transactionType: editingExpense.transactionType,
+        transaction_type: editingExpense.transaction_type,
         party: editingExpense.party,
         amount: String(editingExpense.amount),
-        paidByName: usersMap.get(editingExpense.paidBy) || '',
-        expenseNature: editingExpense.expenseNature,
-        costCenter: editingExpense.costCenter,
-        projectCode: editingExpense.projectCode,
-        expensesCategory: editingExpense.expensesCategory,
+        paid_by: editingExpense.paid_by,
+        expense_nature: editingExpense.expense_nature,
+        cost_center: editingExpense.cost_center,
+        project_code: editingExpense.project_code,
+        expenses_category: editingExpense.expenses_category,
       });
     } else {
        setFormData(getInitialFormData());
@@ -58,15 +58,9 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, upda
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
-    if (!formData.party || !formData.amount || !formData.expenseNature || !formData.costCenter || !formData.projectCode || !formData.expensesCategory || !formData.paidByName) {
-        alert("Please fill all fields.");
-        return;
-    }
-
-    // Validate the entered user name
-    const paidByUser = allUsers.find(u => u.name.toLowerCase() === formData.paidByName.trim().toLowerCase());
-    if (!paidByUser) {
-        alert("Paid By user not found. Please select a valid user from the list or enter their exact name.");
+    setError('');
+    if (!formData.party || !formData.amount || !formData.expense_nature || !formData.cost_center || !formData.project_code || !formData.expenses_category || !formData.paid_by) {
+        setError("Please fill all required fields.");
         return;
     }
 
@@ -76,18 +70,19 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, upda
       addParty(partyName);
     }
     
-    // Exclude paidByName from the final data object
-    const { paidByName, ...restOfFormData } = formData;
-
     const expenseData = {
-      ...restOfFormData,
-      paidBy: paidByUser.id, // Submit the found user's ID
+      transaction_type: formData.transaction_type,
       party: partyName,
       amount: parseFloat(formData.amount),
+      paid_by: formData.paid_by.trim(),
+      expense_nature: formData.expense_nature,
+      cost_center: formData.cost_center,
+      project_code: formData.project_code,
+      expenses_category: formData.expenses_category,
     };
 
     if (editingExpense) {
-      updateExpense({ ...expenseData, id: editingExpense.id, timestamp: editingExpense.timestamp, createdBy: editingExpense.createdBy });
+      updateExpense({ ...expenseData, id: editingExpense.id, created_at: editingExpense.created_at, created_by: editingExpense.created_by });
     } else {
       addExpense(expenseData);
     }
@@ -103,18 +98,18 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, upda
             <label className="block text-sm font-medium text-gray-700">Transaction Type</label>
             <div className="mt-2 flex space-x-4">
                 <label className="inline-flex items-center">
-                    <input type="radio" className="form-radio text-primary focus:ring-primary" name="transactionType" value="payment" checked={formData.transactionType === 'payment'} onChange={handleChange} />
+                    <input type="radio" className="form-radio text-primary focus:ring-primary" name="transaction_type" value="payment" checked={formData.transaction_type === 'payment'} onChange={handleChange} />
                     <span className="ml-2">Payment</span>
                 </label>
                 <label className="inline-flex items-center">
-                    <input type="radio" className="form-radio text-secondary focus:ring-secondary" name="transactionType" value="receipt" checked={formData.transactionType === 'receipt'} onChange={handleChange} />
+                    <input type="radio" className="form-radio text-secondary focus:ring-secondary" name="transaction_type" value="receipt" checked={formData.transaction_type === 'receipt'} onChange={handleChange} />
                     <span className="ml-2">Receipt</span>
                 </label>
             </div>
         </div>
 
         <div className="md:col-span-3">
-          <label htmlFor="party" className="block text-sm font-medium text-gray-700">{formData.transactionType === 'payment' ? 'Paid To' : 'Received From'}</label>
+          <label htmlFor="party" className="block text-sm font-medium text-gray-700">{formData.transaction_type === 'payment' ? 'Paid To' : 'Received From'}</label>
           <input
             type="text"
             name="party"
@@ -137,51 +132,50 @@ const ExpenseForm: React.FC<ExpenseFormProps> = ({ currentUser, addExpense, upda
         </div>
 
         <div className="md:col-span-2">
-          <label htmlFor="costCenter" className="block text-sm font-medium text-gray-700">Cost Center</label>
-          <select name="costCenter" id="costCenter" value={formData.costCenter} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required>
+          <label htmlFor="cost_center" className="block text-sm font-medium text-gray-700">Cost Center</label>
+          <select name="cost_center" id="cost_center" value={formData.cost_center} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required>
             <option value="" disabled>Select Cost Center</option>
             {costCenters.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
         </div>
         
         <div className="md:col-span-2">
-          <label htmlFor="projectCode" className="block text-sm font-medium text-gray-700">Project Code</label>
-          <select name="projectCode" id="projectCode" value={formData.projectCode} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required>
+          <label htmlFor="project_code" className="block text-sm font-medium text-gray-700">Project Code</label>
+          <select name="project_code" id="project_code" value={formData.project_code} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required>
             <option value="" disabled>Select Project Code</option>
             {projectCodes.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
         </div>
 
         <div className="md:col-span-2">
-          <label htmlFor="expensesCategory" className="block text-sm font-medium text-gray-700">Expenses Category</label>
-          <select name="expensesCategory" id="expensesCategory" value={formData.expensesCategory} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required>
+          <label htmlFor="expenses_category" className="block text-sm font-medium text-gray-700">Expenses Category</label>
+          <select name="expenses_category" id="expenses_category" value={formData.expenses_category} onChange={handleChange} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required>
             <option value="" disabled>Select Expenses Category</option>
             {expensesCategories.map(p => <option key={p.id} value={p.name}>{p.name}</option>)}
           </select>
         </div>
 
         <div className="md:col-span-6">
-         <label htmlFor="paidByName" className="block text-sm font-medium text-gray-700">Paid By / Entry User</label>
+         <label htmlFor="paid_by" className="block text-sm font-medium text-gray-700">Paid By</label>
          <input
             type="text"
-            name="paidByName"
-            id="paidByName"
-            list="users-datalist"
-            value={formData.paidByName}
+            name="paid_by"
+            id="paid_by"
+            value={formData.paid_by}
             onChange={handleChange}
             className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm"
             required
-            placeholder="Enter a user's name"
+            placeholder="Enter the name of the person who paid"
           />
-          <datalist id="users-datalist">
-            {allUsers.map(user => <option key={user.id} value={user.name} />)}
-          </datalist>
         </div>
         
         <div className="md:col-span-6">
-          <label htmlFor="expenseNature" className="block text-sm font-medium text-gray-700">Nature of Expense / Receipt</label>
-          <textarea name="expenseNature" id="expenseNature" value={formData.expenseNature} onChange={handleChange} rows={3} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required />
+          <label htmlFor="expense_nature" className="block text-sm font-medium text-gray-700">Nature of Expense / Receipt</label>
+          <textarea name="expense_nature" id="expense_nature" value={formData.expense_nature} onChange={handleChange} rows={3} className="mt-1 block w-full border-gray-300 rounded-md shadow-sm focus:ring-primary focus:border-primary sm:text-sm" required />
         </div>
+        
+        {error && <p className="text-sm text-red-600 md:col-span-6 text-center">{error}</p>}
+        
         <div className="md:col-span-6 flex justify-end space-x-4">
           <button type="button" onClick={onClose} className="inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md shadow-sm text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-primary">
             <CancelIcon className="w-5 h-5 mr-2"/>

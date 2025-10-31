@@ -3,17 +3,20 @@ import React, { useState } from 'react';
 import { User } from '../types';
 
 interface ChangePasswordModalProps {
-  onChangePassword: (newPassword: string) => void;
+  onChangePassword: (newPassword: string) => Promise<boolean>;
   user: User;
+  isResetting?: boolean;
 }
 
-const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onChangePassword, user }) => {
+const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onChangePassword, user, isResetting = false }) => {
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError('');
     if (newPassword.length < 6) {
       setError('Password must be at least 6 characters long.');
       return;
@@ -22,15 +25,24 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onChangePassw
       setError('Passwords do not match.');
       return;
     }
-    onChangePassword(newPassword);
+    setIsLoading(true);
+    const success = await onChangePassword(newPassword);
+    setIsLoading(false);
+    if (!success) {
+      setError('Failed to update password. This could be a temporary issue. Please try again.');
+    }
+    // On success, the parent component will handle closing this modal.
   };
 
   return (
     <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50">
       <div className="bg-white rounded-lg shadow-xl p-8 m-4 max-w-md w-full">
-        <h2 className="text-2xl font-bold text-gray-900">Change Your Password</h2>
+        <h2 className="text-2xl font-bold text-gray-900">{isResetting ? 'Create a New Password' : 'Change Your Password'}</h2>
         <p className="mt-2 text-sm text-gray-600">
-          Welcome, {user.name}. For security, you must change your temporary password before continuing.
+          {isResetting 
+            ? `Welcome back, ${user.name}. Please enter a new password for your account.`
+            : 'For security, you must change your temporary password before continuing.'
+          }
         </p>
         <form onSubmit={handleSubmit} className="mt-6 space-y-4">
           <div>
@@ -59,9 +71,10 @@ const ChangePasswordModal: React.FC<ChangePasswordModalProps> = ({ onChangePassw
           <div className="pt-2">
             <button
               type="submit"
-              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
+              disabled={isLoading}
+              className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:bg-indigo-400"
             >
-              Set New Password
+              {isLoading ? 'Updating...' : 'Set New Password'}
             </button>
           </div>
         </form>

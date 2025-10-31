@@ -1,3 +1,4 @@
+
 import React from 'react';
 import { MasterData } from '../types';
 import MasterDataSection from './MasterDataSection';
@@ -6,7 +7,7 @@ interface PartiesManagementProps {
   parties: MasterData[];
   addParty: (name: string) => void;
   updateParty: (item: MasterData) => void;
-  deleteParty: (id: string) => void;
+  deleteParty: (id: string, type: string) => void;
 }
 
 const PartiesManagement: React.FC<PartiesManagementProps> = (props) => {
@@ -17,7 +18,8 @@ const PartiesManagement: React.FC<PartiesManagementProps> = (props) => {
             data={props.parties}
             onAdd={props.addParty}
             onUpdate={props.updateParty}
-            onDelete={props.deleteParty}
+            onDelete={(id) => props.deleteParty(id, 'party')}
+            type="party"
         />
     </div>
   );

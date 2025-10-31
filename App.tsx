@@ -6,261 +6,258 @@ import Dashboard from './components/Dashboard';
 import AuthPage from './components/AuthPage';
 import ChangePasswordModal from './components/ChangePasswordModal';
 import Footer from './components/Footer';
-
-// Helper to check if localStorage is available and writable
-const isLocalStorageAvailable = () => {
-  try {
-    const testKey = '__testLocalStorage__';
-    localStorage.setItem(testKey, testKey);
-    localStorage.removeItem(testKey);
-    return true;
-  } catch (e) {
-    console.warn("localStorage is not available in this browser environment.");
-    return false;
-  }
-};
-
-// Generic function to load from localStorage.
-const loadFromLocalStorage = <T,>(key: string, defaultValue: T): T => {
-    if (!isLocalStorageAvailable()) {
-      return defaultValue;
-    }
-    try {
-      const storedData = localStorage.getItem(key);
-      return storedData ? (JSON.parse(storedData) as T) : defaultValue;
-    } catch (error) {
-      console.error(`Failed to load or parse ${key} from localStorage. Data might be corrupted.`, error);
-      localStorage.removeItem(key); // Clean up corrupted data
-      return defaultValue;
-    }
-};
-
-// Generic function to save to localStorage with enhanced error handling
-const saveToLocalStorage = <T,>(key:string, data: T) => {
-    if (!isLocalStorageAvailable()) return;
-    try {
-      localStorage.setItem(key, JSON.stringify(data));
-    } catch (error) {
-      console.error(`Failed to save ${key} to localStorage`, error);
-      if (error instanceof DOMException && (error.name === 'QuotaExceededError' || error.name === 'NS_ERROR_DOM_QUOTA_REACHED')) {
-        alert("Error: Could not save your changes because the browser's local storage is full.");
-      } else {
-        alert(`An unexpected error occurred while trying to save your data for "${key}".`);
-      }
-    }
-};
-
+import * as api from './api';
+import { AppLogo } from './components/AppLogo';
 
 const App: React.FC = () => {
   // --- STATE INITIALIZATION ---
-  // Initialize state DIRECTLY from localStorage to prevent race conditions.
-  const [users, setUsers] = useState<User[]>(() => loadFromLocalStorage('users', []));
-  const [expenses, setExpenses] = useState<Expense[]>(() => loadFromLocalStorage('expenses', []));
-  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(() => loadFromLocalStorage('companyInfo', null));
-  const [logo, setLogo] = useState<string | null>(() => loadFromLocalStorage('logo', null));
-  const [costCenters, setCostCenters] = useState<MasterData[]>(() => loadFromLocalStorage('costCenters', []));
-  const [projectCodes, setProjectCodes] = useState<MasterData[]>(() => loadFromLocalStorage('projectCodes', []));
-  const [expensesCategories, setExpensesCategories] = useState<MasterData[]>(() => loadFromLocalStorage('expensesCategories', []));
-  const [parties, setParties] = useState<MasterData[]>(() => loadFromLocalStorage('parties', []));
-
+  const [users, setUsers] = useState<User[]>([]);
+  const [expenses, setExpenses] = useState<Expense[]>([]);
+  const [companyInfo, setCompanyInfo] = useState<CompanyInfo | null>(null);
+  const [costCenters, setCostCenters] = useState<MasterData[]>([]);
+  const [projectCodes, setProjectCodes] = useState<MasterData[]>([]);
+  const [expensesCategories, setExpensesCategories] = useState<MasterData[]>([]);
+  const [parties, setParties] = useState<MasterData[]>([]);
+  
   const [loggedInUser, setLoggedInUser] = useState<User | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [sessionChecked, setSessionChecked] = useState(false);
+  const [isInitialSetup, setIsInitialSetup] = useState(false);
+  const [showPasswordReset, setShowPasswordReset] = useState(false);
 
-  // --- PERSISTENCE EFFECTS ---
-  // Use useEffect to save to localStorage whenever state changes.
-  useEffect(() => { saveToLocalStorage('users', users) }, [users]);
-  useEffect(() => { saveToLocalStorage('expenses', expenses) }, [expenses]);
-  useEffect(() => { saveToLocalStorage('costCenters', costCenters) }, [costCenters]);
-  useEffect(() => { saveToLocalStorage('projectCodes', projectCodes) }, [projectCodes]);
-  useEffect(() => { saveToLocalStorage('expensesCategories', expensesCategories) }, [expensesCategories]);
-  useEffect(() => { saveToLocalStorage('parties', parties) }, [parties]);
-  useEffect(() => { saveToLocalStorage('companyInfo', companyInfo) }, [companyInfo]);
-  useEffect(() => { saveToLocalStorage('logo', logo) }, [logo]);
+  // --- AUTH & DATA LOADING EFFECT ---
+  useEffect(() => {
+    const checkSessionAndLoadData = async () => {
+      const session = await api.getSession();
+      const needsSetup = await api.checkIsInitialSetup();
+      setIsInitialSetup(needsSetup);
+
+      if (session?.user) {
+        const profile = await api.getUserProfile(session.user.id);
+        if (profile) {
+          setLoggedInUser(profile);
+          const data = await api.getInitialData();
+          setUsers(data.users);
+          setExpenses(data.expenses);
+          setCompanyInfo(data.companyInfo);
+          setCostCenters(data.costCenters);
+          setProjectCodes(data.projectCodes);
+          setExpensesCategories(data.expensesCategories);
+          setParties(data.parties);
+        } else {
+           // This can happen if a user is deleted from the DB but not from auth.
+           await api.logout();
+        }
+      } else if (!needsSetup) {
+        // If not setting up and not logged in, fetch public company info
+        const publicCompanyInfo = await api.getCompanyInfo();
+        setCompanyInfo(publicCompanyInfo);
+      }
+      setIsLoading(false);
+      setSessionChecked(true);
+    };
+
+    checkSessionAndLoadData();
+
+    // Listen for Supabase auth events (e.g., for password recovery)
+    const { data: { subscription } } = api.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setShowPasswordReset(true);
+      } else if (event === 'SIGNED_OUT') {
+        setLoggedInUser(null);
+        window.location.reload(); // Reload to clear all state on logout
+      } else if (event === 'SIGNED_IN' && session?.user) {
+         checkSessionAndLoadData();
+      }
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
+  }, []);
 
   // --- Auth and User Management ---
-  const handleAdminSetup = useCallback((adminData: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, companyData: CompanyInfo): { success: boolean, message?: string, recoveryCode?: string } => {
-    // CRITICAL SECURITY FIX: Prevent setup if users already exist.
-    if (users.length > 0) {
-        console.error("Setup attempted when users already exist.");
-        return { success: false, message: "Setup has already been completed. Please log in." };
+  // FIX: Updated adminData type to include the password property, which is required by api.adminSetup.
+  const handleAdminSetup = async (adminData: Omit<User, 'id' | 'role' | 'forcePasswordChange'> & { password: string }, companyData: Omit<CompanyInfo, 'logo_url' | 'id'>): Promise<{ success: boolean, message?: string }> => {
+    const result = await api.adminSetup(adminData, companyData);
+    if (result.success) {
+      setIsInitialSetup(false);
     }
-    
-    const recoveryCode = Array(8).fill(0).map(() => Math.random().toString(36).charAt(2)).join('').toUpperCase();
-
-    const newAdmin: User = {
-        ...adminData,
-        id: `admin-${Date.now()}`,
-        role: 'admin',
-        forcePasswordChange: false,
-        recoveryCode: recoveryCode,
-    };
-    setUsers([newAdmin]);
-    setCompanyInfo(companyData);
-    return { success: true, recoveryCode };
-  }, [users]);
+    return result;
+  };
   
-  const handleLogin = useCallback((email: string, pass: string): boolean => {
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
+  const handleLogin = async (email: string, pass: string): Promise<boolean> => {
+    const user = await api.login(email, pass);
     if (user) {
       setLoggedInUser(user);
+      // Reload all data for the logged in user
+      const data = await api.getInitialData();
+      setUsers(data.users);
+      setExpenses(data.expenses);
+      setCompanyInfo(data.companyInfo);
+      setCostCenters(data.costCenters);
+      setProjectCodes(data.projectCodes);
+      setExpensesCategories(data.expensesCategories);
+      setParties(data.parties);
       return true;
     }
     return false;
-  }, [users]);
+  };
 
-  const handleSignUp = useCallback((userData: Omit<User, 'id' | 'role' | 'forcePasswordChange' | 'mobile'> & {password: string}): { success: boolean, message?: string } => {
-    if (users.some(u => u.email.toLowerCase() === userData.email.toLowerCase())) {
-        return { success: false, message: 'A user with this email already exists.' };
-    }
-    const newUser: User = {
-        name: userData.name,
-        email: userData.email,
-        password: userData.password,
-        id: `user-${Date.now()}`,
-        role: 'user',
-        forcePasswordChange: false,
-    };
-    setUsers(prev => [...prev, newUser]);
-    setLoggedInUser(newUser); // Auto-login after signup
-    return { success: true };
-  }, [users]);
+  const handleSignUp = async (userData: Omit<User, 'id' | 'role' | 'forcePasswordChange'> & {password: string}): Promise<{ success: boolean, message?: string }> => {
+    const result = await api.signUp(userData);
+    // After signup, user needs to confirm their email, so we don't log them in automatically.
+    // The UI will show a confirmation message.
+    return result;
+  };
 
-  const handleLogout = useCallback(() => {
+  const handleLogout = useCallback(async () => {
+    await api.logout();
     setLoggedInUser(null);
   }, []);
 
-  const handleChangePassword = useCallback((newPassword: string) => {
+  const handleChangePassword = async (newPassword: string): Promise<boolean> => {
     if (loggedInUser) {
-      const updatedUser = { ...loggedInUser, password: newPassword, forcePasswordChange: false };
-      setLoggedInUser(updatedUser);
-      setUsers(prevUsers => prevUsers.map(u => u.id === loggedInUser.id ? updatedUser : u));
-    }
-  }, [loggedInUser]);
-
-  const handleValidateRecoveryCode = useCallback((email: string, code: string): boolean => {
-    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
-    if (user && user.role === 'admin' && user.recoveryCode && user.recoveryCode === code.trim()) {
+      const updatedUser = await api.updateUserPassword(newPassword);
+      if (updatedUser) {
+        setLoggedInUser({ ...loggedInUser, forcePasswordChange: false });
         return true;
+      }
     }
     return false;
-  }, [users]);
-
-  const handleResetPassword = useCallback((email: string, newPassword: string) => {
-    setUsers(prevUsers => prevUsers.map(u => {
-        if (u.email.toLowerCase() === email.toLowerCase().trim()) {
-            return { ...u, password: newPassword, forcePasswordChange: false };
-        }
-        return u;
-    }));
-  }, []);
-
-
-  const addUser = useCallback((user: Omit<User, 'id'>) => {
-    const newUser = { ...user, id: `user-${Date.now()}`};
-    setUsers(prev => [...prev, newUser]);
-    return newUser; // Return the full user object with ID
-  }, []);
-
-  const updateUser = useCallback((updatedUser: User) => {
-    setUsers(prev => prev.map(u => u.id === updatedUser.id ? updatedUser : u));
-    if (loggedInUser?.id === updatedUser.id) {
-        setLoggedInUser(updatedUser);
+  };
+  
+  const handlePasswordReset = async (newPassword: string): Promise<boolean> => {
+    const user = await api.updateUserPassword(newPassword);
+    if (user) {
+      setShowPasswordReset(false);
+      sessionStorage.setItem('authMessage', JSON.stringify({type: 'success', message: 'Password updated successfully! You can now log in.'}));
+      await api.logout();
+      return true; // Page will reload after this
+    } else {
+      return false;
     }
-  }, [loggedInUser?.id]);
+  };
+  
+  const handleSendPasswordResetEmail = async (email: string) => {
+    return api.sendPasswordResetEmail(email);
+  }
 
-  const deleteUser = useCallback((userId: string) => {
-    if (expenses.some(exp => exp.paidBy === userId)) {
-        alert("Cannot delete this user as they are associated with existing expense entries. Please reassign their entries before deleting.");
-        return;
+  const addUser = async (user: Omit<User, 'id' | 'role' | 'forcePasswordChange'> & { password?: string, role: 'admin' | 'user' }) => {
+    return api.addUser(user);
+  };
+
+  const updateUser = async (updatedUser: User) => {
+    const savedUser = await api.updateUserProfile(updatedUser);
+    if (savedUser) {
+      setUsers(prev => prev.map(u => u.id === savedUser.id ? savedUser : u));
+      if (loggedInUser?.id === savedUser.id) {
+          setLoggedInUser(savedUser);
+      }
     }
-    setUsers(prev => prev.filter(u => u.id !== userId));
-  }, [expenses]);
-
+  };
 
   // --- Master Data Handlers ---
-  const addCostCenter = useCallback((name: string) => setCostCenters(prev => [...prev, { id: `cc-${Date.now()}`, name }]), []);
-  const updateCostCenter = useCallback((item: MasterData) => setCostCenters(prev => prev.map(ph => ph.id === item.id ? item : ph)), []);
-  const deleteCostCenter = useCallback((id: string) => {
-    const itemToDelete = costCenters.find(item => item.id === id);
-    if (itemToDelete && expenses.some(exp => exp.costCenter === itemToDelete.name)) {
-      alert(`Cannot delete "${itemToDelete.name}" as it is currently in use.`);
-      return;
+  const addMasterDataItem = async (type: 'costCenter' | 'projectCode' | 'expensesCategory' | 'party', name: string) => {
+    const newItem = await api.addMasterDataItem(type, name);
+    if (!newItem) return;
+    switch (type) {
+      case 'costCenter': setCostCenters(prev => [...prev, newItem]); break;
+      case 'projectCode': setProjectCodes(prev => [...prev, newItem]); break;
+      case 'expensesCategory': setExpensesCategories(prev => [...prev, newItem]); break;
+      case 'party': setParties(prev => [...prev, newItem]); break;
     }
-    setCostCenters(prev => prev.filter(ph => ph.id !== id));
-  }, [expenses, costCenters]);
-
-  const addProjectCode = useCallback((name: string) => setProjectCodes(prev => [...prev, { id: `pc-${Date.now()}`, name }]), []);
-  const updateProjectCode = useCallback((item: MasterData) => setProjectCodes(prev => prev.map(ph => ph.id === item.id ? item : ph)), []);
-  const deleteProjectCode = useCallback((id: string) => {
-    const itemToDelete = projectCodes.find(item => item.id === id);
-    if (itemToDelete && expenses.some(exp => exp.projectCode === itemToDelete.name)) {
-      alert(`Cannot delete "${itemToDelete.name}" as it is currently in use.`);
-      return;
+  };
+  const updateMasterDataItem = async (item: MasterData) => {
+    const updatedItem = await api.updateMasterDataItem(item);
+    if (!updatedItem) return;
+    switch (item.type) {
+      case 'costCenter': setCostCenters(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i)); break;
+      case 'projectCode': setProjectCodes(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i)); break;
+      case 'expensesCategory': setExpensesCategories(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i)); break;
+      case 'party': setParties(prev => prev.map(i => i.id === updatedItem.id ? updatedItem : i)); break;
     }
-    setProjectCodes(prev => prev.filter(ph => ph.id !== id));
-  }, [expenses, projectCodes]);
-
-  const addExpensesCategory = useCallback((name: string) => setExpensesCategories(prev => [...prev, { id: `ec-${Date.now()}`, name }]), []);
-  const updateExpensesCategory = useCallback((item: MasterData) => setExpensesCategories(prev => prev.map(eh => eh.id === item.id ? item : eh)), []);
-  const deleteExpensesCategory = useCallback((id: string) => {
-    const itemToDelete = expensesCategories.find(item => item.id === id);
-    if (itemToDelete && expenses.some(exp => exp.expensesCategory === itemToDelete.name)) {
-      alert(`Cannot delete "${itemToDelete.name}" as it is currently in use.`);
-      return;
+  };
+  const deleteMasterDataItem = async (id: string, type: string) => {
+    const success = await api.deleteMasterDataItem(id);
+    if (success) {
+      switch (type) {
+        case 'costCenter': setCostCenters(prev => prev.filter(i => i.id !== id)); break;
+        case 'projectCode': setProjectCodes(prev => prev.filter(i => i.id !== id)); break;
+        case 'expensesCategory': setExpensesCategories(prev => prev.filter(i => i.id !== id)); break;
+        case 'party': setParties(prev => prev.filter(i => i.id !== id)); break;
+      }
     }
-    setExpensesCategories(prev => prev.filter(eh => eh.id !== id));
-  }, [expenses, expensesCategories]);
-  
-  const addParty = useCallback((name: string) => setParties(prev => [...prev, { id: `p-${Date.now()}`, name }]), []);
-  const updateParty = useCallback((item: MasterData) => setParties(prev => prev.map(p => p.id === item.id ? item : p)), []);
-  const deleteParty = useCallback((id: string) => {
-    const itemToDelete = parties.find(item => item.id === id);
-    if (itemToDelete && expenses.some(exp => exp.party === itemToDelete.name)) {
-        alert(`Cannot delete "${itemToDelete.name}" as it is currently in use.`);
-        return;
-    }
-    setParties(prev => prev.filter(p => p.id !== id));
-  }, [expenses, parties]);
+  };
   
   // --- Expense Handlers ---
-  const addExpense = useCallback((expense: Omit<Expense, 'id' | 'timestamp'>) => {
-    const newExpense = { ...expense, id: `exp-${Date.now()}`, timestamp: new Date().toISOString(), createdBy: loggedInUser?.id };
-    setExpenses(prev => [newExpense, ...prev]);
-  }, [loggedInUser]);
-  const updateExpense = useCallback((updatedExpense: Expense) => setExpenses(prev => prev.map(exp => (exp.id === updatedExpense.id ? updatedExpense : exp))), []);
-  const deleteExpense = useCallback((id: string) => setExpenses(prev => prev.filter(exp => exp.id !== id)), []);
+  const addExpense = async (expense: Omit<Expense, 'id' | 'created_at'>) => {
+    if (!loggedInUser) return;
+    const newExpense = await api.addExpense(expense, loggedInUser.id);
+    if (newExpense) {
+      setExpenses(prev => [newExpense, ...prev]);
+    }
+  };
+  const updateExpense = async (updatedExpense: Expense) => {
+    const savedExpense = await api.updateExpense(updatedExpense);
+    if (savedExpense) {
+      setExpenses(prev => prev.map(exp => (exp.id === savedExpense.id ? savedExpense : exp)));
+    }
+  };
+  const deleteExpense = async (id: string) => {
+    const success = await api.deleteExpense(id);
+    if (success) {
+      setExpenses(prev => prev.filter(exp => exp.id !== id));
+    }
+  };
 
   const displayedExpenses = useMemo(() => {
     if (!loggedInUser) return [];
     if (loggedInUser.role === 'admin') return expenses;
-    return expenses.filter(exp => exp.paidBy === loggedInUser.id || exp.createdBy === loggedInUser.id);
+    return expenses.filter(exp => exp.created_by === loggedInUser.id);
   }, [loggedInUser, expenses]);
 
-  const handleLogoUpload = useCallback((file: File) => {
-    const reader = new FileReader();
-    reader.onloadend = () => setLogo(reader.result as string);
-    reader.readAsDataURL(file);
-  }, []);
+  const handleLogoUpload = async (file: File) => {
+    const newCompanyInfo = await api.setLogo(file);
+    if (newCompanyInfo) {
+      setCompanyInfo(newCompanyInfo);
+    }
+  };
   
   const masterDataProps = useMemo(() => ({
     costCenters, expensesCategories, parties, projectCodes,
-    addCostCenter, updateCostCenter, deleteCostCenter,
-    addProjectCode, updateProjectCode, deleteProjectCode,
-    addExpensesCategory, updateExpensesCategory, deleteExpensesCategory,
-    addParty, updateParty, deleteParty,
-  }), [
-    costCenters, expensesCategories, parties, projectCodes,
-    addCostCenter, updateCostCenter, deleteCostCenter,
-    addProjectCode, updateProjectCode, deleteProjectCode,
-    addExpensesCategory, updateExpensesCategory, deleteExpensesCategory,
-    addParty, updateParty, deleteParty
-  ]);
+    addCostCenter: (name: string) => addMasterDataItem('costCenter', name),
+    updateCostCenter: (item: MasterData) => updateMasterDataItem({ ...item, type: 'costCenter'}),
+    deleteCostCenter: (id: string) => deleteMasterDataItem(id, 'costCenter'),
+    addProjectCode: (name: string) => addMasterDataItem('projectCode', name),
+    updateProjectCode: (item: MasterData) => updateMasterDataItem({ ...item, type: 'projectCode'}),
+    deleteProjectCode: (id: string) => deleteMasterDataItem(id, 'projectCode'),
+    addExpensesCategory: (name: string) => addMasterDataItem('expensesCategory', name),
+    updateExpensesCategory: (item: MasterData) => updateMasterDataItem({ ...item, type: 'expensesCategory'}),
+    deleteExpensesCategory: (id: string) => deleteMasterDataItem(id, 'expensesCategory'),
+    addParty: (name: string) => addMasterDataItem('party', name),
+    updateParty: (item: MasterData) => updateMasterDataItem({ ...item, type: 'party'}),
+    deleteParty: (id: string) => deleteMasterDataItem(id, 'party'),
+  }), [costCenters, expensesCategories, parties, projectCodes]);
 
   const userManagementProps = useMemo(() => ({
-    users, addUser, updateUser, deleteUser
-  }), [users, addUser, updateUser, deleteUser]);
+    users, addUser, updateUser
+  }), [users]);
 
-  // The decision to show setup or login is now based on the fully loaded user state
-  const isInitialSetup = users.length === 0;
+  if (!sessionChecked || isLoading) {
+    return (
+      <div className="flex flex-col items-center justify-center min-h-screen bg-light-gray">
+        <AppLogo className="h-16 w-auto" />
+        <div className="mt-4 flex items-center space-x-2 text-gray-500">
+            <svg className="animate-spin h-5 w-5 text-primary" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+              <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+              <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            <span>Loading Application...</span>
+        </div>
+      </div>
+    );
+  }
 
   if (!loggedInUser) {
     return (
@@ -268,14 +265,17 @@ const App: React.FC = () => {
         onLogin={handleLogin}
         onSetup={handleAdminSetup}
         onSignUp={handleSignUp}
-        onValidateRecoveryCode={handleValidateRecoveryCode}
-        onResetPassword={handleResetPassword}
+        onSendPasswordResetEmail={handleSendPasswordResetEmail}
         isInitialSetup={isInitialSetup}
         companyInfo={companyInfo}
       />
     );
   }
   
+  if (showPasswordReset) {
+    return <ChangePasswordModal onChangePassword={handlePasswordReset} user={loggedInUser} isResetting={true} />
+  }
+
   if (loggedInUser.forcePasswordChange) {
     return <ChangePasswordModal onChangePassword={handleChangePassword} user={loggedInUser} />;
   }
@@ -285,7 +285,6 @@ const App: React.FC = () => {
       <Header
         currentUser={loggedInUser}
         onLogout={handleLogout}
-        logo={logo}
         onLogoUpload={handleLogoUpload}
         companyInfo={companyInfo}
       />

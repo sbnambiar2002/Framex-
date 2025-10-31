@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Expense, User } from '../types';
 import { EditIcon } from './icons/EditIcon';
@@ -10,11 +9,9 @@ interface ExpenseListProps {
   onEdit: (expense: Expense) => void;
   onDelete: (id: string) => void;
   currentUser: User;
-  allUsers: User[]; 
 }
 
-const ExpenseList: React.FC<ExpenseListProps> = ({ expenses, onEdit, onDelete, allUsers }) => {
-  const usersMap = new Map(allUsers.map(user => [user.id, user.name]));
+const ExpenseList: React.FC<ExpenseListProps> = ({ expenses, onEdit, onDelete }) => {
 
   const handleDelete = (id: string) => {
       if (window.confirm('Are you sure you want to delete this entry?')) {
@@ -52,21 +49,21 @@ const ExpenseList: React.FC<ExpenseListProps> = ({ expenses, onEdit, onDelete, a
               <tbody className="bg-white divide-y divide-gray-200">
                   {expenses.map((expense) => (
                   <tr key={expense.id} className="hover:bg-gray-50 transition-colors">
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(expense.timestamp).toLocaleDateString()}</td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{usersMap.get(expense.paidBy) || 'Unknown User'}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">{new Date(expense.created_at).toLocaleDateString()}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.paid_by || 'Unknown User'}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm capitalize">
-                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${expense.transactionType === 'payment' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
-                              {expense.transactionType}
+                          <span className={`px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${expense.transaction_type === 'payment' ? 'bg-red-100 text-red-800' : 'bg-green-100 text-green-800'}`}>
+                              {expense.transaction_type}
                           </span>
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">{expense.party}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-red-600 text-right">
-                          {expense.transactionType === 'payment' ? expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                          {expense.transaction_type === 'payment' ? expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                       </td>
                       <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-green-600 text-right">
-                          {expense.transactionType === 'receipt' ? expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
+                          {expense.transaction_type === 'receipt' ? expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 }) : '-'}
                       </td>
-                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" title={`${expense.costCenter} / ${expense.projectCode}`}>{expense.expensesCategory}</td>
+                      <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500" title={`${expense.cost_center} / ${expense.project_code}`}>{expense.expenses_category}</td>
                       <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                           <div className="flex items-center justify-end space-x-3">
                               <button onClick={() => onEdit(expense)} className="text-primary hover:text-indigo-900" aria-label={`Edit expense for ${expense.party}`}>
@@ -91,7 +88,7 @@ const ExpenseList: React.FC<ExpenseListProps> = ({ expenses, onEdit, onDelete, a
                   <div>
                       <p className="text-sm font-bold text-gray-900">{expense.party}</p>
                       <p className="text-xs text-gray-500">
-                        {new Date(expense.timestamp).toLocaleDateString()} &bull; {usersMap.get(expense.paidBy) || 'Unknown'}
+                        {new Date(expense.created_at).toLocaleDateString()} &bull; {expense.paid_by || 'Unknown'}
                       </p>
                   </div>
                   <div className="flex items-center space-x-3 flex-shrink-0 ml-4">
@@ -102,10 +99,10 @@ const ExpenseList: React.FC<ExpenseListProps> = ({ expenses, onEdit, onDelete, a
 
               <div className="flex justify-between items-center">
                   <div>
-                    <p className="text-xs text-gray-500">{expense.expensesCategory}</p>
-                    <p className="text-xs text-gray-500 truncate" title={expense.expenseNature}>{expense.expenseNature}</p>
+                    <p className="text-xs text-gray-500">{expense.expenses_category}</p>
+                    <p className="text-xs text-gray-500 truncate" title={expense.expense_nature}>{expense.expense_nature}</p>
                   </div>
-                  {expense.transactionType === 'payment' ? (
+                  {expense.transaction_type === 'payment' ? (
                      <p className="text-lg font-bold text-red-600">
                        -{expense.amount.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
                      </p>

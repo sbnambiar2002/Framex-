@@ -11,10 +11,11 @@ interface MasterDataSectionProps {
   data: MasterData[];
   onAdd: (name: string) => void;
   onUpdate: (item: MasterData) => void;
-  onDelete: (id: string) => void;
+  onDelete: (id: string, type: string) => void;
+  type: string;
 }
 
-const MasterDataSection: React.FC<MasterDataSectionProps> = ({ title, data, onAdd, onUpdate, onDelete }) => {
+const MasterDataSection: React.FC<MasterDataSectionProps> = ({ title, data, onAdd, onUpdate, onDelete, type }) => {
   const [newItemName, setNewItemName] = useState('');
   const [editingItem, setEditingItem] = useState<MasterData | null>(null);
 
@@ -35,7 +36,7 @@ const MasterDataSection: React.FC<MasterDataSectionProps> = ({ title, data, onAd
 
   const handleDelete = (id: string) => {
     if (window.confirm('Are you sure you want to delete this item?')) {
-        onDelete(id);
+        onDelete(id, type);
     }
   };
 

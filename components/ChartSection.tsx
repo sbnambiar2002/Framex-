@@ -1,4 +1,3 @@
-
 import React, { useMemo, useState } from 'react';
 import { Expense } from '../types';
 import { EmptyStateIcon } from './icons/EmptyStateIcon';
@@ -170,12 +169,12 @@ const BarChart: React.FC<BarChartProps> = ({ data }) => {
 
 // --- Main Chart Section ---
 const ChartSection: React.FC<ChartSectionProps> = ({ expenses }) => {
-  const paymentExpenses = useMemo(() => expenses.filter(e => e.transactionType === 'payment'), [expenses]);
+  const paymentExpenses = useMemo(() => expenses.filter(e => e.transaction_type === 'payment'), [expenses]);
   
   const expensesByCategory = useMemo(() => {
     const dataMap = new Map<string, number>();
     paymentExpenses.forEach(exp => {
-      dataMap.set(exp.expensesCategory, (dataMap.get(exp.expensesCategory) || 0) + exp.amount);
+      dataMap.set(exp.expenses_category, (dataMap.get(exp.expenses_category) || 0) + exp.amount);
     });
     return Array.from(dataMap.entries())
       .map(([label, value]) => ({ label, value }))
@@ -185,7 +184,7 @@ const ChartSection: React.FC<ChartSectionProps> = ({ expenses }) => {
   const expensesByMonth = useMemo(() => {
     const dataMap = new Map<string, { total: number, date: Date }>();
     paymentExpenses.forEach(exp => {
-      const date = new Date(exp.timestamp);
+      const date = new Date(exp.created_at);
       const monthKey = `${date.getFullYear()}-${date.getMonth()}`;
       
       if (!dataMap.has(monthKey)) {

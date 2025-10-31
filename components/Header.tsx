@@ -7,12 +7,11 @@ import { LogoutIcon } from './icons/LogoutIcon';
 interface HeaderProps {
   currentUser: User;
   onLogout: () => void;
-  logo: string | null;
-  onLogoUpload: (file: File) => void;
+  onLogoUpload: (file: File) => Promise<void>;
   companyInfo: CompanyInfo | null;
 }
 
-const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, logo, onLogoUpload, companyInfo }) => {
+const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, onLogoUpload, companyInfo }) => {
   return (
     <header className="bg-white shadow-md sticky top-0 z-50">
       <div className="container mx-auto px-4 sm:px-6 lg:px-8">
@@ -27,7 +26,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, logo, onLogoUplo
             </div>
           </div>
           <div className="flex items-center space-x-6">
-            <LogoUpload logo={logo} onLogoUpload={onLogoUpload} />
+            <LogoUpload logo={companyInfo?.logo_url || null} onLogoUpload={onLogoUpload} />
             <div className="flex items-center space-x-3">
                 <div className="text-right hidden md:block">
                     <p className="font-semibold text-gray-700">{currentUser.name}</p>
