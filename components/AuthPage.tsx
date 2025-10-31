@@ -1,40 +1,56 @@
-import React, { useState } from 'react';
+
+import React, { useState, useCallback } from 'react';
 import { User, CompanyInfo } from '../types';
 import { AppLogo } from './AppLogo';
 import { COUNTRIES } from '../constants';
+import { KeyIcon } from './icons/KeyIcon';
 
 interface AuthPageProps {
   onLogin: (email: string, pass: string) => boolean;
-  onSetup: (admin: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, company: CompanyInfo) => { success: boolean, message?: string };
+  onSetup: (admin: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, company: CompanyInfo) => { success: boolean, message?: string, recoveryCode?: string };
   onSignUp: (user: Omit<User, 'id' | 'role' | 'forcePasswordChange' | 'mobile'> & {password: string}) => { success: boolean, message?: string };
+  onValidateRecoveryCode: (email: string, code: string) => boolean;
+  onResetPassword: (email: string, newPassword: string) => void;
   isInitialSetup: boolean;
   companyInfo: CompanyInfo | null;
 }
 
-const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, onSignUp, isInitialSetup, companyInfo }) => {
+const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, onSignUp, isInitialSetup, companyInfo, onValidateRecoveryCode, onResetPassword }) => {
   const [view, setView] = useState<'choice' | 'login' | 'signup'>('choice');
   const [showForgotPassword, setShowForgotPassword] = useState(false);
+  const [recoveryCodeToShow, setRecoveryCodeToShow] = useState<string | null>(null);
 
-  // --- Login Form Logic ---
+  // --- Login Form State ---
   const [loginEmail, setLoginEmail] = useState('');
   const [loginPassword, setLoginPassword] = useState('');
   const [loginError, setLoginError] = useState('');
 
-  const handleLoginSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoginError('');
-    const success = onLogin(loginEmail, loginPassword);
-    if (!success) {
-      setLoginError('Invalid email or password.');
-    }
-  };
-  
-  // --- Admin Setup Form Logic ---
+  // --- Admin Setup Form State ---
   const [setupFormData, setSetupFormData] = useState({
     name: '', email: '', password: '', confirmPassword: '', mobile: '',
     companyName: '', address: '', country: 'United States of America', taxIdType: 'EIN', taxIdNumber: '',
   });
   const [setupError, setSetupError] = useState('');
+  
+  // --- Public Sign Up Form State ---
+  const [signUpFormData, setSignUpFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
+  const [signUpError, setSignUpError] = useState('');
+
+  // --- Password Recovery State ---
+  const [recoveryStep, setRecoveryStep] = useState(1); // 1: enter code, 2: set password, 3: success
+  const [recoveryEmail, setRecoveryEmail] = useState('');
+  const [recoveryCodeInput, setRecoveryCodeInput] = useState('');
+  const [resetPassword, setResetPassword] = useState('');
+  const [resetConfirmPassword, setResetConfirmPassword] = useState('');
+  const [recoveryError, setRecoveryError] = useState('');
+
+  const handleLoginSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setLoginError('');
+    if (!onLogin(loginEmail, loginPassword)) {
+      setLoginError('Invalid email or password.');
+    }
+  };
   
   const handleSetupChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement | HTMLSelectElement>) => {
     setSetupFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -52,14 +68,12 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, onSignUp, isIniti
     const adminData = { name: setupFormData.name, email: setupFormData.email, password: setupFormData.password, mobile: setupFormData.mobile };
     const companyData = { name: setupFormData.companyName, address: setupFormData.address, taxInfo: { country: setupFormData.country, taxIdType: setupFormData.taxIdType, taxIdNumber: setupFormData.taxIdNumber }};
     const result = onSetup(adminData, companyData);
-    if (!result.success) {
+    if (result.success && result.recoveryCode) {
+        setRecoveryCodeToShow(result.recoveryCode);
+    } else {
         setSetupError(result.message || "An unexpected error occurred during setup.");
     }
   };
-
-  // --- Public Sign Up Form Logic ---
-  const [signUpFormData, setSignUpFormData] = useState({ name: '', email: '', password: '', confirmPassword: '' });
-  const [signUpError, setSignUpError] = useState('');
 
   const handleSignUpChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setSignUpFormData(prev => ({ ...prev, [e.target.name]: e.target.value }));
@@ -79,7 +93,63 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, onSignUp, isIniti
         setSignUpError(result.message || "An unexpected error occurred during sign up.");
     }
   };
+
+  const handleContinueAfterSetup = () => {
+    setRecoveryCodeToShow(null);
+    onLogin(setupFormData.email, setupFormData.password);
+  };
   
+  const copyToClipboard = useCallback(() => {
+    if (recoveryCodeToShow) {
+        navigator.clipboard.writeText(recoveryCodeToShow).then(() => {
+            alert('Recovery code copied to clipboard!');
+        }, (err) => {
+            alert('Failed to copy code. Please copy it manually.');
+            console.error('Could not copy text: ', err);
+        });
+    }
+  }, [recoveryCodeToShow]);
+
+  const openForgotPasswordModal = () => {
+    setRecoveryStep(1);
+    setRecoveryEmail('');
+    setRecoveryCodeInput('');
+    setResetPassword('');
+    setResetConfirmPassword('');
+    setRecoveryError('');
+    setShowForgotPassword(true);
+  };
+
+  const closeForgotPasswordModal = () => {
+    setShowForgotPassword(false);
+  };
+  
+  const handleValidateCodeSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError('');
+    if (onValidateRecoveryCode(recoveryEmail, recoveryCodeInput)) {
+        setRecoveryStep(2);
+    } else {
+        setRecoveryError('Invalid email or recovery code for an admin account.');
+    }
+  };
+
+  const handlePasswordResetSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setRecoveryError('');
+    if (resetPassword.length < 6) {
+        setRecoveryError('New password must be at least 6 characters long.');
+        return;
+    }
+    if (resetPassword !== resetConfirmPassword) {
+        setRecoveryError('Passwords do not match.');
+        return;
+    }
+    onResetPassword(recoveryEmail, resetPassword);
+    setRecoveryStep(3);
+  };
+
+
   const loginInputClasses = "relative block w-full px-4 py-3 bg-white text-gray-900 placeholder-gray-500 border border-gray-300 rounded-lg appearance-none focus:outline-none focus:ring-primary focus:border-primary sm:text-sm";
   const setupInputClasses = "block w-full px-1 py-2 bg-transparent border-0 border-b-2 border-gray-200 focus:ring-0 focus:border-primary transition-colors sm:text-sm";
 
@@ -107,7 +177,7 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, onSignUp, isIniti
             </div>
           </form>
           <div className="mt-4 text-center text-sm">
-            <button type="button" onClick={() => setShowForgotPassword(true)} className="font-medium text-primary hover:text-indigo-500">
+            <button type="button" onClick={openForgotPasswordModal} className="font-medium text-primary hover:text-indigo-500">
                 Forgot your password?
             </button>
           </div>
@@ -190,12 +260,66 @@ const AuthPage: React.FC<AuthPageProps> = ({ onLogin, onSetup, onSignUp, isIniti
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-light-gray py-12 px-4 sm:px-6 lg:px-8">
       {renderContent()}
+
+      {recoveryCodeToShow && (
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4">
+              <div className="bg-white rounded-lg shadow-xl p-8 m-4 max-w-md w-full text-center">
+                  <KeyIcon className="mx-auto h-12 w-12 text-yellow-500" />
+                  <h2 className="mt-4 text-2xl font-bold text-gray-900">Save Your Recovery Code!</h2>
+                  <p className="mt-2 text-gray-600">This is your <span className="font-bold">one-time</span> administrator recovery code. Please copy and save it in a secure place, like a password manager. You will need it if you ever forget your password.</p>
+                  <div className="my-6 p-4 bg-yellow-50 border-2 border-dashed border-yellow-300 rounded-lg">
+                      <p className="font-mono text-2xl tracking-widest text-yellow-800 font-bold">{recoveryCodeToShow}</p>
+                  </div>
+                  <div className="mt-6 flex flex-col sm:flex-row gap-4">
+                      <button onClick={copyToClipboard} className="w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">Copy Code</button>
+                      <button onClick={handleContinueAfterSetup} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700">I have saved my code, continue</button>
+                  </div>
+              </div>
+          </div>
+      )}
+
       {showForgotPassword && (
-          <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={() => setShowForgotPassword(false)}>
+          <div className="fixed inset-0 bg-gray-600 bg-opacity-75 flex items-center justify-center z-50 p-4" onClick={closeForgotPasswordModal}>
               <div className="bg-white rounded-lg shadow-xl p-8 m-4 max-w-md w-full" onClick={(e) => e.stopPropagation()}>
-                  <h2 className="text-2xl font-bold text-gray-900">Password Reset</h2>
-                  <p className="mt-4 text-gray-600">To reset your password, please contact your company's administrator. They will be able to provide you with a temporary password.</p>
-                  <div className="mt-6"><button onClick={() => setShowForgotPassword(false)} className="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">OK</button></div>
+                  <h2 className="text-2xl font-bold text-gray-900">Password Recovery</h2>
+                  
+                  {recoveryStep === 1 && (
+                      <form onSubmit={handleValidateCodeSubmit} className="space-y-4 mt-4">
+                          <p className="text-sm text-gray-600"><span className="font-semibold">For Standard Users:</span> Please contact your administrator to have your password reset.</p>
+                          <hr/>
+                          <p className="text-sm text-gray-600"><span className="font-semibold">For Administrators:</span> Enter your email and one-time recovery code to reset your password.</p>
+                          <input type="email" placeholder="Admin Email" value={recoveryEmail} onChange={e => setRecoveryEmail(e.target.value)} className={loginInputClasses} required />
+                          <input type="text" placeholder="Recovery Code" value={recoveryCodeInput} onChange={e => setRecoveryCodeInput(e.target.value)} className={loginInputClasses} required />
+                          {recoveryError && <p className="text-sm text-red-600">{recoveryError}</p>}
+                          <button type="submit" className="w-full flex justify-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700">Validate</button>
+                      </form>
+                  )}
+
+                  {recoveryStep === 2 && (
+                      <form onSubmit={handlePasswordResetSubmit} className="space-y-4 mt-4">
+                          <p className="text-sm text-gray-600">Validation successful! Please set a new password for <span className="font-semibold">{recoveryEmail}</span>.</p>
+                          <input type="password" placeholder="New Password" value={resetPassword} onChange={e => setResetPassword(e.target.value)} className={loginInputClasses} required />
+                          <input type="password" placeholder="Confirm New Password" value={resetConfirmPassword} onChange={e => setResetConfirmPassword(e.target.value)} className={loginInputClasses} required />
+                          {recoveryError && <p className="text-sm text-red-600">{recoveryError}</p>}
+                          <button type="submit" className="w-full flex justify-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700">Reset Password</button>
+                      </form>
+                  )}
+
+                  {recoveryStep === 3 && (
+                     <div className="space-y-4 mt-4 text-center">
+                        <p className="text-green-700 font-semibold">Password successfully reset!</p>
+                        <p className="text-sm text-gray-600">You can now log in with your new password.</p>
+                        <button onClick={closeForgotPasswordModal} className="w-full flex justify-center py-2 px-4 border rounded-md shadow-sm text-sm font-medium text-white bg-primary hover:bg-indigo-700">
+                          Go to Login
+                        </button>
+                     </div>
+                  )}
+
+                  {recoveryStep !== 3 && (
+                    <button onClick={closeForgotPasswordModal} className="mt-4 w-full flex justify-center py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50">
+                        Cancel
+                    </button>
+                  )}
               </div>
           </div>
       )}

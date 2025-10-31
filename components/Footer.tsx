@@ -11,7 +11,7 @@ const Footer: React.FC<FooterProps> = ({ companyInfo }) => {
     <footer className="py-4 px-4 sm:px-6 lg:px-8">
       <div className="text-center text-sm text-gray-500">
         <p>
-          {companyInfo ? companyInfo.name : 'Expense Tracker'} © {currentYear} All Rights Reserved.
+          {companyInfo ? companyInfo.name : 'FrameX'} © {currentYear} All Rights Reserved.
         </p>
       </div>
     </footer>

@@ -21,7 +21,7 @@ const Header: React.FC<HeaderProps> = ({ currentUser, onLogout, logo, onLogoUplo
             <AppLogo className="h-8 w-auto" />
             <div className="hidden sm:block border-l pl-4 border-gray-200">
               <h1 className="text-2xl font-bold text-gray-800">
-                Expense Tracker
+                FrameX
               </h1>
               {companyInfo && <p className="text-sm text-gray-500">{companyInfo.name}</p>}
             </div>

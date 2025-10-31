@@ -1,5 +1,5 @@
 {
-  "name": "Expense Tracker",
+  "name": "FrameX",
   "description": "An application for employees to track payments and expenses, with a cumulative admin view for oversight. Users can manage their own entries, while the admin has full control over all records.",
   "requestFramePermissions": []
 }

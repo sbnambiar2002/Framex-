@@ -1,3 +1,4 @@
+
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { Expense, User, MasterData, CompanyInfo } from './types';
 import Header from './components/Header';
@@ -76,24 +77,26 @@ const App: React.FC = () => {
   useEffect(() => { saveToLocalStorage('logo', logo) }, [logo]);
 
   // --- Auth and User Management ---
-  const handleAdminSetup = useCallback((adminData: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, companyData: CompanyInfo): { success: boolean, message?: string } => {
+  const handleAdminSetup = useCallback((adminData: Omit<User, 'id' | 'role' | 'forcePasswordChange'>, companyData: CompanyInfo): { success: boolean, message?: string, recoveryCode?: string } => {
     // CRITICAL SECURITY FIX: Prevent setup if users already exist.
     if (users.length > 0) {
         console.error("Setup attempted when users already exist.");
         return { success: false, message: "Setup has already been completed. Please log in." };
     }
     
+    const recoveryCode = Array(8).fill(0).map(() => Math.random().toString(36).charAt(2)).join('').toUpperCase();
+
     const newAdmin: User = {
         ...adminData,
         id: `admin-${Date.now()}`,
         role: 'admin',
         forcePasswordChange: false,
+        recoveryCode: recoveryCode,
     };
     setUsers([newAdmin]);
     setCompanyInfo(companyData);
-    setLoggedInUser(newAdmin);
-    return { success: true };
-  }, [users]); // Depend on users to get the latest state
+    return { success: true, recoveryCode };
+  }, [users]);
   
   const handleLogin = useCallback((email: string, pass: string): boolean => {
     const user = users.find(u => u.email.toLowerCase() === email.toLowerCase() && u.password === pass);
@@ -132,6 +135,24 @@ const App: React.FC = () => {
       setUsers(prevUsers => prevUsers.map(u => u.id === loggedInUser.id ? updatedUser : u));
     }
   }, [loggedInUser]);
+
+  const handleValidateRecoveryCode = useCallback((email: string, code: string): boolean => {
+    const user = users.find(u => u.email.toLowerCase() === email.toLowerCase().trim());
+    if (user && user.role === 'admin' && user.recoveryCode && user.recoveryCode === code.trim()) {
+        return true;
+    }
+    return false;
+  }, [users]);
+
+  const handleResetPassword = useCallback((email: string, newPassword: string) => {
+    setUsers(prevUsers => prevUsers.map(u => {
+        if (u.email.toLowerCase() === email.toLowerCase().trim()) {
+            return { ...u, password: newPassword, forcePasswordChange: false };
+        }
+        return u;
+    }));
+  }, []);
+
 
   const addUser = useCallback((user: Omit<User, 'id'>) => {
     const newUser = { ...user, id: `user-${Date.now()}`};
@@ -247,6 +268,8 @@ const App: React.FC = () => {
         onLogin={handleLogin}
         onSetup={handleAdminSetup}
         onSignUp={handleSignUp}
+        onValidateRecoveryCode={handleValidateRecoveryCode}
+        onResetPassword={handleResetPassword}
         isInitialSetup={isInitialSetup}
         companyInfo={companyInfo}
       />

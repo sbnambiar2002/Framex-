@@ -21,6 +21,7 @@ export interface User {
   mobile?: string;
   password: string;
   forcePasswordChange?: boolean;
+  recoveryCode?: string;
 }
 
 export interface MasterData {
