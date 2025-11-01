@@ -1,29 +1,26 @@
-
 import { createClient } from '@supabase/supabase-js';
 import { Expense, User, MasterData, CompanyInfo } from './types';
 
 // --- Supabase Client Initialization ---
+// Use Vite envs (import.meta.env) if present; otherwise fallback for local dev.
+// IMPORTANT: Replace fallback anon key in local dev only. In production use Netlify env vars.
 
-// The Supabase URL and public API key are set here for local development.
-// This key was provided in your README file.
-// Your live Netlify site will securely use the environment variables
-// you've already configured in the Netlify dashboard.
-const supabaseUrl = 'https://zvdnips1zfbnpckjsbvk.supabase.co'; const supabaseAnonKey = 'eyJh...'; // keep your same anon key here  // Create the Supabase client with session persistence enabled export const supabase = createClient(supabaseUrl, supabaseAnonKey, {   auth: {     persistSession: true,    // store session in browser (so tabs/windows share it)     autoRefreshToken: true,  // refresh tokens automatically   }, }); 'https://zvdnpslzfbpncbjksvek.supabase.co';
-const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2ZG5wc2x6ZmJwbmNiamtzdmVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MDU2MTksImV4cCI6MjA3NzQ4MTYxOX0.GuW39JPfnhjOZcNh_SAEQWmXrQH8cPKuyPfwBOZnv7I';
+const supabaseUrl = (import.meta?.env?.VITE_SUPABASE_URL as string) || 'https://zvdnips1zfbnpckjsbvk.supabase.co';
+const supabaseAnonKey = (import.meta?.env?.VITE_SUPABASE_ANON_KEY as string) || 'REPLACE_WITH_ANON_KEY_FOR_LOCAL_DEV_ONLY';
 
-if (!supabaseUrl || !supabaseAnonKey) {
-    const errorMessage = "Supabase URL and Key are not configured. Please provide them as environment variables (SUPABASE_URL, SUPABASE_ANON_KEY). This is a required step for deployment.";
-    
-    // Display a user-friendly error in the UI
-    document.body.innerHTML = `<div style="font-size: 1.2rem; padding: 2rem; font-family: sans-serif; background-color: #fef2f2; color: #b91c1c; height: 100vh; display: flex; align-items: center; justify-content: center; text-align: center;">${errorMessage}</div>`;
-    
-    throw new Error(errorMessage);
+if (!supabaseUrl || !supabaseAnonKey || supabaseAnonKey === 'REPLACE_WITH_ANON_KEY_FOR_LOCAL_DEV_ONLY') {
+  console.warn('Warning: Supabase URL or anon key may not be configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Netlify env vars for production.');
 }
 
+// Create the Supabase client with session persistence enabled
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+  },
+});
 
-// Create the Supabase client with session persistence enabled export const supabase = createClient(supabaseUrl, supabaseAnonKey, {   auth: {     persistSession: true,    // store login/session in browser storage     autoRefreshToken: true,  // refresh access tokens automatically   }, });
 
-// --- Auth API ---
 
 export const getSession = async () => {
     const { data } = await supabase.auth.getSession();
