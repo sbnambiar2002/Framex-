@@ -2,25 +2,24 @@ import { createClient } from '@supabase/supabase-js';
 import { Expense, User, MasterData, CompanyInfo } from './types';
 
 // --- Supabase Client Initialization ---
-// Use Vite envs (import.meta.env) if present; otherwise fallback for local dev.
-// IMPORTANT: Replace fallback anon key in local dev only. In production use Netlify env vars.
+// Uses environment variables from Netlify, with optional local fallback for dev.
 
-const supabaseUrl = (import.meta?.env?.VITE_SUPABASE_URL as string) || 'https://zvdnips1zfbnpckjsbvk.supabase.co';
-const supabaseAnonKey = (import.meta?.env?.VITE_SUPABASE_ANON_KEY as string) || 'REPLACE_WITH_ANON_KEY_FOR_LOCAL_DEV_ONLY';
+const supabaseUrl = import.meta.env.VITE_SUPABASE_URL || 'https://zvdnips1zfbnpckjsbvk.supabase.co';
+const supabaseAnonKey = import.meta.env.VITE_SUPABASE_ANON_KEY || 'YOUR_LOCAL_ANON_KEY_HERE'; // optional fallback
 
-if (!supabaseUrl || !supabaseAnonKey || supabaseAnonKey === 'REPLACE_WITH_ANON_KEY_FOR_LOCAL_DEV_ONLY') {
-  console.warn('Warning: Supabase URL or anon key may not be configured. Set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Netlify env vars for production.');
+if (!supabaseUrl || !supabaseAnonKey) {
+  throw new Error(
+    'Missing Supabase URL or anon key. Please set VITE_SUPABASE_URL and VITE_SUPABASE_ANON_KEY in Netlify environment variables.'
+  );
 }
 
-// Create the Supabase client with session persistence enabled
+// ✅ Create Supabase client with session persistence
 export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
   auth: {
     persistSession: true,
     autoRefreshToken: true,
   },
 });
-
-
 
 export const getSession = async () => {
     const { data } = await supabase.auth.getSession();
