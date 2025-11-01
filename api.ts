@@ -8,7 +8,7 @@ import { Expense, User, MasterData, CompanyInfo } from './types';
 // This key was provided in your README file.
 // Your live Netlify site will securely use the environment variables
 // you've already configured in the Netlify dashboard.
-const supabaseUrl = 'https://zvdnpslzfbpncbjksvek.supabase.co';
+const supabaseUrl = 'https://zvdnips1zfbnpckjsbvk.supabase.co'; const supabaseAnonKey = 'eyJh...'; // keep your same anon key here  // Create the Supabase client with session persistence enabled export const supabase = createClient(supabaseUrl, supabaseAnonKey, {   auth: {     persistSession: true,    // store session in browser (so tabs/windows share it)     autoRefreshToken: true,  // refresh tokens automatically   }, }); 'https://zvdnpslzfbpncbjksvek.supabase.co';
 const supabaseAnonKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp2ZG5wc2x6ZmJwbmNiamtzdmVrIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjE5MDU2MTksImV4cCI6MjA3NzQ4MTYxOX0.GuW39JPfnhjOZcNh_SAEQWmXrQH8cPKuyPfwBOZnv7I';
 
 if (!supabaseUrl || !supabaseAnonKey) {
@@ -21,7 +21,7 @@ if (!supabaseUrl || !supabaseAnonKey) {
 }
 
 
-const supabase = createClient(supabaseUrl, supabaseAnonKey);
+// Create the Supabase client with session persistence enabled export const supabase = createClient(supabaseUrl, supabaseAnonKey, {   auth: {     persistSession: true,    // store login/session in browser storage     autoRefreshToken: true,  // refresh access tokens automatically   }, });
 
 // --- Auth API ---
 
